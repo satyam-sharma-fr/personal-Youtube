@@ -7,10 +7,11 @@ export interface FeedOptions {
   cursor?: string;
   limit?: number;
   channelId?: string;
+  categoryId?: string;
 }
 
 export async function getFeed(options: FeedOptions = {}) {
-  const { cursor, limit = 20, channelId } = options;
+  const { cursor, limit = 20, channelId, categoryId } = options;
   const supabase = await createClient();
   
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -28,9 +29,35 @@ export async function getFeed(options: FeedOptions = {}) {
     return { success: true, videos: [], hasMore: false, nextCursor: null };
   }
 
-  const channelIds = channelId 
-    ? [channelId] 
-    : subscriptions.map((s) => s.channel_id);
+  let channelIds: string[];
+
+  if (channelId) {
+    // Filter by specific channel
+    channelIds = [channelId];
+  } else if (categoryId) {
+    // Filter by category - get channels in this category
+    const { data: categoryChannels } = await supabase
+      .from("channel_category_channels")
+      .select("channel_id")
+      .eq("user_id", user.id)
+      .eq("category_id", categoryId);
+
+    if (!categoryChannels?.length) {
+      return { success: true, videos: [], hasMore: false, nextCursor: null };
+    }
+
+    // Also ensure these channels are still subscribed
+    const categoryChannelIds = categoryChannels.map((c) => c.channel_id);
+    const subscribedIds = new Set(subscriptions.map((s) => s.channel_id));
+    channelIds = categoryChannelIds.filter((id) => subscribedIds.has(id));
+
+    if (channelIds.length === 0) {
+      return { success: true, videos: [], hasMore: false, nextCursor: null };
+    }
+  } else {
+    // All subscribed channels
+    channelIds = subscriptions.map((s) => s.channel_id);
+  }
 
   // Use RPC function to get videos with channel info
   const { data: videosData, error } = await supabase.rpc("get_user_feed", {
@@ -197,7 +224,7 @@ export async function getVideoState(videoId: string) {
   return { success: true, state: data || null };
 }
 
-export async function getWatchHistory(limit = 50) {
+export async function getWatchHistory(limit = 50, includePartial = true) {
   const supabase = await createClient();
   
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -205,13 +232,23 @@ export async function getWatchHistory(limit = 50) {
     return { error: "You must be logged in" };
   }
 
-  // Get watch history
-  const { data: history, error } = await supabase
+  // Get watch history - order by last_watched_at (most recent activity)
+  // Include partial watches if requested (for "continue watching" and better summaries)
+  let query = supabase
     .from("user_video_state")
-    .select("video_id, watched_at, progress_seconds, completed")
-    .eq("user_id", user.id)
-    .eq("watched", true)
-    .order("watched_at", { ascending: false })
+    .select("video_id, watched_at, last_watched_at, first_watched_at, progress_seconds, total_watched_seconds, completed, watch_count")
+    .eq("user_id", user.id);
+
+  if (!includePartial) {
+    // Only fully watched videos
+    query = query.eq("watched", true);
+  } else {
+    // Include any video the user has interacted with (watched or has progress)
+    query = query.or("watched.eq.true,total_watched_seconds.gt.0,progress_seconds.gt.0");
+  }
+
+  const { data: history, error } = await query
+    .order("last_watched_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
   if (error) {
@@ -227,18 +264,166 @@ export async function getWatchHistory(limit = 50) {
   const videoIds = history.map((h) => h.video_id);
   const { data: videos } = await supabase
     .from("youtube_videos")
-    .select("video_id, title, thumbnail_url, duration, channel_id")
+    .select("video_id, title, thumbnail_url, thumbnail_high_url, duration, channel_id")
     .in("video_id", videoIds);
 
-  // Create a map
+  // Get channel info for the videos
+  const channelIds = [...new Set(videos?.map((v) => v.channel_id) || [])];
+  const { data: channels } = await supabase
+    .from("youtube_channels")
+    .select("channel_id, title, thumbnail_url")
+    .in("channel_id", channelIds);
+
+  // Create maps
   const videoMap = new Map(videos?.map((v) => [v.video_id, v]) || []);
+  const channelMap = new Map(channels?.map((c) => [c.channel_id, c]) || []);
 
   // Combine the data
-  const combined = history.map((h) => ({
-    ...h,
-    video: videoMap.get(h.video_id) || null,
-  }));
+  const combined = history.map((h) => {
+    const video = videoMap.get(h.video_id);
+    const channel = video ? channelMap.get(video.channel_id) : null;
+    return {
+      ...h,
+      video: video ? {
+        ...video,
+        youtube_channels: channel || null,
+      } : null,
+    };
+  });
 
   return { success: true, history: combined };
+}
+
+// Log watch time delta for a specific video (called periodically from watch page)
+export interface LogVideoWatchDeltaParams {
+  videoId: string;
+  deltaSeconds: number;
+  progressSeconds?: number;
+  completed?: boolean;
+  isNewSession?: boolean; // true when starting a new watch session
+}
+
+export async function logVideoWatchDelta(params: LogVideoWatchDeltaParams) {
+  const { videoId, deltaSeconds, progressSeconds, completed = false, isNewSession = false } = params;
+  
+  const supabase = await createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "You must be logged in" };
+  }
+
+  const now = new Date().toISOString();
+
+  // First, get existing state to properly increment values
+  const { data: existing } = await supabase
+    .from("user_video_state")
+    .select("total_watched_seconds, watch_count, first_watched_at, progress_seconds")
+    .eq("user_id", user.id)
+    .eq("video_id", videoId)
+    .single();
+
+  // Calculate new values
+  const currentTotalSeconds = existing?.total_watched_seconds ?? 0;
+  const currentWatchCount = existing?.watch_count ?? 0;
+  const currentProgress = existing?.progress_seconds ?? 0;
+  
+  const newTotalSeconds = currentTotalSeconds + Math.max(0, deltaSeconds);
+  const newWatchCount = isNewSession ? currentWatchCount + 1 : currentWatchCount;
+  const newProgress = progressSeconds !== undefined 
+    ? Math.max(currentProgress, progressSeconds) 
+    : currentProgress;
+
+  // Determine if this should be marked as "watched" (threshold: 30 seconds or completed)
+  const WATCHED_THRESHOLD_SECONDS = 30;
+  const shouldMarkWatched = completed || newTotalSeconds >= WATCHED_THRESHOLD_SECONDS;
+
+  const { error } = await supabase
+    .from("user_video_state")
+    .upsert({
+      user_id: user.id,
+      video_id: videoId,
+      total_watched_seconds: newTotalSeconds,
+      watch_count: newWatchCount,
+      progress_seconds: newProgress,
+      last_watched_at: now,
+      first_watched_at: existing?.first_watched_at ?? now,
+      completed: completed || undefined,
+      watched: shouldMarkWatched || undefined,
+      watched_at: shouldMarkWatched && !existing ? now : undefined,
+      updated_at: now,
+    }, {
+      onConflict: "user_id,video_id",
+    });
+
+  if (error) {
+    console.error("Log video watch delta error:", error);
+    return { error: "Failed to log watch time" };
+  }
+
+  return { 
+    success: true, 
+    totalWatchedSeconds: newTotalSeconds,
+    watched: shouldMarkWatched,
+  };
+}
+
+// Get "continue watching" list - videos with progress but not completed
+export async function getContinueWatching(limit = 10) {
+  const supabase = await createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "You must be logged in" };
+  }
+
+  const { data: history, error } = await supabase
+    .from("user_video_state")
+    .select("video_id, progress_seconds, total_watched_seconds, last_watched_at")
+    .eq("user_id", user.id)
+    .gt("progress_seconds", 0)
+    .or("completed.is.null,completed.eq.false")
+    .order("last_watched_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Continue watching error:", error);
+    return { error: "Failed to load continue watching" };
+  }
+
+  if (!history?.length) {
+    return { success: true, videos: [] };
+  }
+
+  // Get video details
+  const videoIds = history.map((h) => h.video_id);
+  const { data: videos } = await supabase
+    .from("youtube_videos")
+    .select("video_id, title, thumbnail_url, thumbnail_high_url, duration, channel_id")
+    .in("video_id", videoIds);
+
+  // Get channel info
+  const channelIds = [...new Set(videos?.map((v) => v.channel_id) || [])];
+  const { data: channels } = await supabase
+    .from("youtube_channels")
+    .select("channel_id, title, thumbnail_url")
+    .in("channel_id", channelIds);
+
+  const videoMap = new Map(videos?.map((v) => [v.video_id, v]) || []);
+  const channelMap = new Map(channels?.map((c) => [c.channel_id, c]) || []);
+
+  const combined = history.map((h) => {
+    const video = videoMap.get(h.video_id);
+    const channel = video ? channelMap.get(video.channel_id) : null;
+    return {
+      ...h,
+      video: video ? {
+        ...video,
+        youtube_channels: channel || null,
+      } : null,
+    };
+  }).filter((h) => h.video !== null);
+
+  return { success: true, videos: combined };
 }
 

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AddChannelDialog } from "@/components/channels/add-channel-dialog";
 import { ChannelCard } from "@/components/channels/channel-card";
+import { CategoryManager } from "@/components/channels/category-manager";
 import { Button } from "@/components/ui/button";
 import { Tv, Plus } from "lucide-react";
 
@@ -25,12 +26,33 @@ export default async function ChannelsPage() {
     p_user_id: user.id,
   });
 
+  // Get user's categories
+  const { data: categories } = await supabase
+    .from("channel_categories")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("name", { ascending: true });
+
+  // Get channel-category assignments
+  const { data: channelCategoryAssignments } = await supabase
+    .from("channel_category_channels")
+    .select("channel_id, category_id")
+    .eq("user_id", user.id);
+
+  // Build a map of channel_id -> category_ids[]
+  const channelCategoriesMap = new Map<string, string[]>();
+  for (const assignment of channelCategoryAssignments || []) {
+    const existing = channelCategoriesMap.get(assignment.channel_id) || [];
+    channelCategoriesMap.set(assignment.channel_id, [...existing, assignment.category_id]);
+  }
+
   // Transform the data to match the expected format
   const subscriptions = channelsData?.map((ch) => ({
     id: ch.id,
     channel_id: ch.channel_id,
     category: ch.category,
     created_at: ch.created_at,
+    categoryIds: channelCategoriesMap.get(ch.channel_id) || [],
     youtube_channels: ch.title ? {
       channel_id: ch.channel_id,
       title: ch.title,
@@ -60,12 +82,15 @@ export default async function ChannelsPage() {
             )}
           </p>
         </div>
-        <AddChannelDialog>
-          <Button disabled={channelCount >= limit && tier === "free"}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Channel
-          </Button>
-        </AddChannelDialog>
+        <div className="flex items-center gap-2">
+          <CategoryManager categories={categories || []} />
+          <AddChannelDialog>
+            <Button disabled={channelCount >= limit && tier === "free"}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Channel
+            </Button>
+          </AddChannelDialog>
+        </div>
       </div>
 
       {/* Channels Grid */}
@@ -75,6 +100,7 @@ export default async function ChannelsPage() {
             <ChannelCard 
               key={subscription.id} 
               subscription={subscription}
+              categories={categories || []}
               index={index}
             />
           ))}
@@ -99,4 +125,3 @@ export default async function ChannelsPage() {
     </div>
   );
 }
-

@@ -9,3 +9,12 @@ export { WaitlistForm } from "./WaitlistForm";
 export { FAQ } from "./FAQ";
 export { Footer } from "./Footer";
 
+// New glass-wow components
+export { DemoPortal } from "./DemoPortal";
+export { GlassSurface, GlassCard, GlassPortal } from "./glass/GlassSurface";
+export { HeroGlass } from "./HeroGlass";
+export { FeatureRunway } from "./FeatureRunway";
+export { BeforeAfterRefraction } from "./BeforeAfterRefraction";
+export { PrinciplesPrismCards } from "./PrinciplesPrismCards";
+export { PricingTiers } from "./PricingTiers";
+

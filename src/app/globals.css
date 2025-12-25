@@ -46,34 +46,36 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-/* Dark theme by default - modern, minimal aesthetic */
+/* Dark theme by default - softer, more refined aesthetic */
 :root {
   --radius: 0.75rem;
-  /* Near black background */
-  --background: oklch(0.09 0.005 285);
-  --foreground: oklch(0.97 0 0);
-  /* Slightly elevated cards */
-  --card: oklch(0.13 0.005 285);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.13 0.005 285);
-  --popover-foreground: oklch(0.97 0 0);
+  /* Sidebar width - updated by JS, default expanded */
+  --sidebar-width: 16rem;
+  /* Soft charcoal background - lighter than pure black */
+  --background: oklch(0.16 0.008 285);
+  --foreground: oklch(0.95 0 0);
+  /* Slightly elevated cards with subtle warmth */
+  --card: oklch(0.20 0.008 285);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.20 0.008 285);
+  --popover-foreground: oklch(0.95 0 0);
   /* Vibrant coral/red accent - YouTube inspired but unique */
   --primary: oklch(0.65 0.2 25);
   --primary-foreground: oklch(0.98 0 0);
-  /* Subtle secondary */
-  --secondary: oklch(0.18 0.005 285);
-  --secondary-foreground: oklch(0.95 0 0);
-  /* Muted elements */
-  --muted: oklch(0.18 0.005 285);
-  --muted-foreground: oklch(0.6 0 0);
+  /* Subtle secondary - lighter for better contrast */
+  --secondary: oklch(0.25 0.008 285);
+  --secondary-foreground: oklch(0.93 0 0);
+  /* Muted elements - more visible */
+  --muted: oklch(0.25 0.008 285);
+  --muted-foreground: oklch(0.65 0 0);
   /* Teal accent for watched/success states */
   --accent: oklch(0.55 0.15 175);
   --accent-foreground: oklch(0.98 0 0);
   /* Destructive red */
   --destructive: oklch(0.55 0.22 25);
-  /* Subtle borders */
-  --border: oklch(0.25 0.005 285);
-  --input: oklch(0.2 0.005 285);
+  /* Subtle borders - more visible */
+  --border: oklch(0.32 0.008 285);
+  --input: oklch(0.28 0.008 285);
   --ring: oklch(0.65 0.2 25);
   /* Chart colors */
   --chart-1: oklch(0.65 0.2 25);
@@ -81,14 +83,14 @@
   --chart-3: oklch(0.7 0.15 85);
   --chart-4: oklch(0.6 0.2 280);
   --chart-5: oklch(0.75 0.15 50);
-  /* Sidebar */
-  --sidebar: oklch(0.11 0.005 285);
-  --sidebar-foreground: oklch(0.95 0 0);
+  /* Sidebar - slightly darker for depth */
+  --sidebar: oklch(0.14 0.008 285);
+  --sidebar-foreground: oklch(0.93 0 0);
   --sidebar-primary: oklch(0.65 0.2 25);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.18 0.005 285);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.22 0.005 285);
+  --sidebar-accent: oklch(0.22 0.008 285);
+  --sidebar-accent-foreground: oklch(0.93 0 0);
+  --sidebar-border: oklch(0.28 0.008 285);
   --sidebar-ring: oklch(0.65 0.2 25);
 }
 
@@ -158,8 +160,8 @@
   /* Subtle grid pattern for backgrounds */
   .bg-grid-pattern {
     background-image: 
-      linear-gradient(to right, oklch(0.3 0 0 / 0.1) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(0.3 0 0 / 0.1) 1px, transparent 1px);
+      linear-gradient(to right, oklch(0.4 0 0 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.4 0 0 / 0.08) 1px, transparent 1px);
     background-size: 60px 60px;
   }
 
@@ -232,5 +234,146 @@
   .animate-pulse-glow,
   .animate-drift {
     animation: none;
+  }
+}
+
+/* ========================================
+   Glass-morphism utilities for marketing
+   ======================================== */
+@layer utilities {
+  /* Base glass surface */
+  .glass-surface {
+    --glass-opacity: 0.4;
+    --glass-blur: 20px;
+    --glass-border: oklch(0.5 0 0 / 0.2);
+    --glass-inner-glow: oklch(1 0 0 / 0.05);
+    
+    background: oklch(0.22 0.008 285 / var(--glass-opacity));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      inset 0 1px 1px 0 var(--glass-inner-glow),
+      0 4px 30px oklch(0 0 0 / 0.15);
+  }
+
+  /* Specular highlight overlay - responds to --mx, --my CSS vars */
+  .glass-specular {
+    --specular-size: 300px;
+    --specular-opacity: 0.12;
+    position: relative;
+  }
+  .glass-specular::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      var(--specular-size) circle at var(--mx, 50%) var(--my, 50%),
+      oklch(1 0 0 / var(--specular-opacity)),
+      transparent 60%
+    );
+    transition: opacity 0.3s ease;
+    z-index: 1;
+  }
+
+  /* Refraction border effect */
+  .glass-refraction {
+    --refraction-color-1: var(--primary);
+    --refraction-color-2: var(--accent);
+    position: relative;
+  }
+  .glass-refraction::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      oklch(from var(--refraction-color-1) l c h / 0.3),
+      transparent 40%,
+      transparent 60%,
+      oklch(from var(--refraction-color-2) l c h / 0.3)
+    );
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Portal depth effect for demo section */
+  .glass-portal {
+    --portal-depth: 20px;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+  .glass-portal-inner {
+    transform: translateZ(calc(var(--portal-depth) * -1));
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .glass-portal:hover .glass-portal-inner {
+    transform: translateZ(0);
+  }
+
+  /* Shimmer animation for glass elements */
+  .glass-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      oklch(1 0 0 / 0.08) 50%,
+      transparent 75%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  50%, 100% { transform: translateX(100%); }
+}
+
+@keyframes portal-pulse {
+  0%, 100% { 
+    box-shadow: 
+      0 0 30px oklch(from var(--accent) l c h / 0.2),
+      0 0 60px oklch(from var(--primary) l c h / 0.1);
+  }
+  50% { 
+    box-shadow: 
+      0 0 40px oklch(from var(--accent) l c h / 0.3),
+      0 0 80px oklch(from var(--primary) l c h / 0.15);
+  }
+}
+
+.animate-portal-pulse {
+  animation: portal-pulse 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-shimmer::after {
+    animation: none;
+    display: none;
+  }
+  .animate-portal-pulse {
+    animation: none;
+  }
+  .glass-portal-inner {
+    transform: none !important;
   }
 }

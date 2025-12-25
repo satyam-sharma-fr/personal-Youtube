@@ -2,11 +2,12 @@
 
 import {
   Header,
-  Hero,
-  ScrollWords,
-  BeforeAfter,
-  Principles,
-  HowItWorks,
+  HeroGlass,
+  DemoPortal,
+  FeatureRunway,
+  BeforeAfterRefraction,
+  PrinciplesPrismCards,
+  PricingTiers,
   SocialProof,
   WaitlistForm,
   FAQ,
@@ -25,11 +26,12 @@ export default function LandingPage() {
       {/* Main content */}
       <Header />
       <main>
-        <Hero />
-        <ScrollWords />
-        <BeforeAfter />
-        <Principles />
-        <HowItWorks />
+        <HeroGlass />
+        <DemoPortal />
+        <FeatureRunway />
+        <BeforeAfterRefraction />
+        <PrinciplesPrismCards />
+        <PricingTiers />
         <SocialProof />
         <WaitlistForm />
         <FAQ />

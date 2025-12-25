@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      channel_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_categories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      channel_category_channels: {
+        Row: {
+          category_id: string
+          channel_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_category_channels_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "channel_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_category_channels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_subscriptions: {
         Row: {
           category: string | null
@@ -38,7 +112,49 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "channel_subscriptions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "youtube_channels"
+            referencedColumns: ["channel_id"]
+          },
+          {
             foreignKeyName: "channel_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_watch_sessions: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          updated_at: string | null
+          user_id: string
+          watched_seconds: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          watched_seconds?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          watched_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_watch_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -50,6 +166,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          daily_watch_limit_minutes: number | null
           email: string | null
           full_name: string | null
           id: string
@@ -57,11 +174,14 @@ export type Database = {
           stripe_subscription_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
+          time_zone: string | null
           updated_at: string | null
+          watch_limit_enabled: boolean | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          daily_watch_limit_minutes?: number | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -69,11 +189,14 @@ export type Database = {
           stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
+          time_zone?: string | null
           updated_at?: string | null
+          watch_limit_enabled?: boolean | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          daily_watch_limit_minutes?: number | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -81,7 +204,9 @@ export type Database = {
           stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
+          time_zone?: string | null
           updated_at?: string | null
+          watch_limit_enabled?: boolean | null
         }
         Relationships: []
       }
@@ -89,33 +214,45 @@ export type Database = {
         Row: {
           completed: boolean | null
           created_at: string | null
+          first_watched_at: string | null
           id: string
+          last_watched_at: string | null
           progress_seconds: number | null
+          total_watched_seconds: number | null
           updated_at: string | null
           user_id: string
           video_id: string
+          watch_count: number | null
           watched: boolean | null
           watched_at: string | null
         }
         Insert: {
           completed?: boolean | null
           created_at?: string | null
+          first_watched_at?: string | null
           id?: string
+          last_watched_at?: string | null
           progress_seconds?: number | null
+          total_watched_seconds?: number | null
           updated_at?: string | null
           user_id: string
           video_id: string
+          watch_count?: number | null
           watched?: boolean | null
           watched_at?: string | null
         }
         Update: {
           completed?: boolean | null
           created_at?: string | null
+          first_watched_at?: string | null
           id?: string
+          last_watched_at?: string | null
           progress_seconds?: number | null
+          total_watched_seconds?: number | null
           updated_at?: string | null
           user_id?: string
           video_id?: string
+          watch_count?: number | null
           watched?: boolean | null
           watched_at?: string | null
         }
@@ -373,13 +510,34 @@ export type Enums<
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
-// Helper types for easier usage
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
+
+// Type aliases for convenience
+export type ChannelCategory = Tables<"channel_categories">
 export type Profile = Tables<"profiles">
-export type ChannelSubscription = Tables<"channel_subscriptions">
 export type YouTubeChannel = Tables<"youtube_channels">
 export type YouTubeVideo = Tables<"youtube_videos">
+export type ChannelSubscription = Tables<"channel_subscriptions">
 export type UserVideoState = Tables<"user_video_state">
-
-// RPC function return types
-export type UserChannelResult = Database["public"]["Functions"]["get_user_channels"]["Returns"][number]
-export type UserFeedResult = Database["public"]["Functions"]["get_user_feed"]["Returns"][number]
+export type DailyWatchSession = Tables<"daily_watch_sessions">

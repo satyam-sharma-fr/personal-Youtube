@@ -6,11 +6,13 @@ import {
   parseChannelInput,
   getChannelById,
   getChannelByHandle,
+  getChannelByUsername,
+  getChannelByCustomUrl,
   getChannelVideos,
   searchChannels as searchYouTubeChannels,
 } from "@/lib/youtube";
 
-export async function addChannel(input: string) {
+export async function addChannel(input: string, categoryIds?: string[]) {
   const supabase = await createClient();
   
   // Get current user
@@ -27,11 +29,23 @@ export async function addChannel(input: string) {
 
   try {
     // Get channel info from YouTube
-    let channelData;
+    let channelData = null;
     if (parsed.type === "id") {
       channelData = await getChannelById(parsed.value);
-    } else {
+    } else if (parsed.type === "handle") {
       channelData = await getChannelByHandle(parsed.value);
+    } else if (parsed.type === "username") {
+      channelData =
+        (await getChannelByUsername(parsed.value)) ??
+        (await getChannelByHandle(parsed.value));
+    } else if (parsed.type === "customUrl") {
+      channelData = await getChannelByCustomUrl(parsed.value);
+    }
+
+    // Fallback: if parsing wasn't enough (or legacy endpoints didn't work), try search
+    if (!channelData) {
+      const results = await searchYouTubeChannels(parsed.value, 1);
+      channelData = results[0] ?? null;
     }
 
     if (!channelData) {
@@ -39,12 +53,18 @@ export async function addChannel(input: string) {
     }
 
     // Check if already subscribed
-    const { data: existingSub } = await supabase
+    const { data: existingSub, error: existingSubError } = await supabase
       .from("channel_subscriptions")
       .select("id")
       .eq("user_id", user.id)
       .eq("channel_id", channelData.channelId)
-      .single();
+      .maybeSingle();
+
+    // If we got an error other than "no rows", surface it for debugging
+    if (existingSubError) {
+      console.error("Existing subscription check error:", existingSubError);
+      return { error: `Failed to check existing subscription: ${existingSubError.message}` };
+    }
 
     if (existingSub) {
       return { error: "You're already subscribed to this channel" };
@@ -89,7 +109,7 @@ export async function addChannel(input: string) {
 
     if (channelError) {
       console.error("Channel upsert error:", channelError);
-      return { error: "Failed to save channel data" };
+      return { error: `Failed to save channel data: ${channelError.message}` };
     }
 
     // Create subscription
@@ -102,7 +122,25 @@ export async function addChannel(input: string) {
 
     if (subError) {
       console.error("Subscription error:", subError);
-      return { error: "Failed to subscribe to channel" };
+      return { error: `Failed to subscribe to channel: ${subError.message}` };
+    }
+
+    // Assign categories if provided
+    if (categoryIds && categoryIds.length > 0) {
+      const categoryAssignments = categoryIds.map((categoryId) => ({
+        user_id: user.id,
+        category_id: categoryId,
+        channel_id: channelData.channelId,
+      }));
+
+      const { error: categoryError } = await supabase
+        .from("channel_category_channels")
+        .insert(categoryAssignments);
+
+      if (categoryError) {
+        console.error("Category assignment error:", categoryError);
+        // Don't fail the whole operation if category assignment fails
+      }
     }
 
     // Fetch and cache videos
@@ -139,7 +177,22 @@ export async function addChannel(input: string) {
     return { success: true, channel: channelData };
   } catch (error) {
     console.error("Add channel error:", error);
-    return { error: "Failed to add channel. Please try again." };
+
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("YouTube API key is not configured")) {
+      return {
+        error:
+          "Missing YOUTUBE_API_KEY. Add it to `.env.local` and restart the dev server.",
+      };
+    }
+    if (message.startsWith("YouTube API error:")) {
+      return {
+        error:
+          `${message}. Check that your key is valid, the YouTube Data API v3 is enabled in Google Cloud, and you have quota left.`,
+      };
+    }
+
+    return { error: message || "Failed to add channel. Please try again." };
   }
 }
 
@@ -150,6 +203,13 @@ export async function removeChannel(channelId: string) {
   if (authError || !user) {
     return { error: "You must be logged in" };
   }
+
+  // Remove category assignments first
+  await supabase
+    .from("channel_category_channels")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("channel_id", channelId);
 
   const { error } = await supabase
     .from("channel_subscriptions")

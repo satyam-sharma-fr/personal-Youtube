@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { VideoCard } from "./video-card";
-import { VideoSkeletonGrid } from "./video-skeleton";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, RefreshCw } from "lucide-react";
 import { getFeed } from "@/app/actions/videos";
-import { refreshAllChannels } from "@/app/actions/channels";
+import { refreshAllChannels, refreshChannelVideos } from "@/app/actions/channels";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 
 type Video = {
   id: string;
@@ -36,9 +36,17 @@ interface VideoFeedProps {
   initialVideos: Video[];
   initialHasMore: boolean;
   initialNextCursor: string | null;
+  channelId?: string;
+  categoryId?: string;
 }
 
-export function VideoFeed({ initialVideos, initialHasMore, initialNextCursor }: VideoFeedProps) {
+export function VideoFeed({ 
+  initialVideos, 
+  initialHasMore, 
+  initialNextCursor,
+  channelId,
+  categoryId,
+}: VideoFeedProps) {
   const [videos, setVideos] = useState<Video[]>(initialVideos);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
@@ -46,12 +54,82 @@ export function VideoFeed({ initialVideos, initialHasMore, initialNextCursor }: 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  // Reset state when channelId or categoryId changes (i.e., when navigating between filters)
+  useEffect(() => {
+    setVideos(initialVideos);
+    setHasMore(initialHasMore);
+    setNextCursor(initialNextCursor);
+  }, [initialVideos, initialHasMore, initialNextCursor, channelId, categoryId]);
+
+  // Set up realtime subscriptions for live updates
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Subscribe to new videos being added
+    const videosChannel = supabase
+      .channel("videos-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "youtube_videos",
+        },
+        async () => {
+          // Refresh feed to get the new video with proper channel info
+          const result = await getFeed({ limit: 20, channelId, categoryId });
+          if (result.videos) {
+            setVideos(result.videos as Video[]);
+            setHasMore(result.hasMore);
+            setNextCursor(result.nextCursor);
+            toast.success("New video added to your feed!");
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to video state changes (watched/unwatched)
+    const stateChannel = supabase
+      .channel("video-state-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_video_state",
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const newState = payload.new as { video_id: string; watched: boolean; progress_seconds: number; completed: boolean };
+            setVideos((prev) =>
+              prev.map((video) =>
+                video.video_id === newState.video_id
+                  ? {
+                      ...video,
+                      watched: newState.watched,
+                      progress_seconds: newState.progress_seconds,
+                      completed: newState.completed,
+                    }
+                  : video
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(videosChannel);
+      supabase.removeChannel(stateChannel);
+    };
+  }, [channelId, categoryId]);
+
   const loadMore = useCallback(async () => {
     if (isLoading || !hasMore || !nextCursor) return;
 
     setIsLoading(true);
     try {
-      const result = await getFeed({ cursor: nextCursor, limit: 20 });
+      const result = await getFeed({ cursor: nextCursor, limit: 20, channelId, categoryId });
       if (result.error) {
         toast.error(result.error);
       } else if (result.videos) {
@@ -64,7 +142,7 @@ export function VideoFeed({ initialVideos, initialHasMore, initialNextCursor }: 
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, hasMore, nextCursor]);
+  }, [isLoading, hasMore, nextCursor, channelId, categoryId]);
 
   // Intersection observer for infinite scroll
   useEffect(() => {
@@ -92,14 +170,18 @@ export function VideoFeed({ initialVideos, initialHasMore, initialNextCursor }: 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const refreshResult = await refreshAllChannels();
+      // If filtering by channel, refresh just that channel; otherwise refresh all
+      const refreshResult = channelId 
+        ? await refreshChannelVideos(channelId)
+        : await refreshAllChannels();
+      
       if (refreshResult.error) {
         toast.error(refreshResult.error);
       } else {
         toast.success(`Refreshed ${refreshResult.count} videos`);
         
         // Reload feed
-        const feedResult = await getFeed({ limit: 20 });
+        const feedResult = await getFeed({ limit: 20, channelId, categoryId });
         if (feedResult.videos) {
           setVideos(feedResult.videos as Video[]);
           setHasMore(feedResult.hasMore);
@@ -128,7 +210,7 @@ export function VideoFeed({ initialVideos, initialHasMore, initialNextCursor }: 
           ) : (
             <RefreshCw className="w-4 h-4 mr-2" />
           )}
-          Refresh Feed
+          Refresh {channelId ? "Channel" : categoryId ? "Category" : "Feed"}
         </Button>
       </div>
 
@@ -143,6 +225,23 @@ export function VideoFeed({ initialVideos, initialHasMore, initialNextCursor }: 
           ))}
         </motion.div>
       </AnimatePresence>
+
+      {/* Empty state when no videos */}
+      {videos.length === 0 && !isLoading && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-muted-foreground">
+            No videos found. Try refreshing to fetch the latest content.
+          </p>
+          <Button variant="outline" className="mt-4" onClick={handleRefresh} disabled={isRefreshing}>
+            {isRefreshing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Refresh
+          </Button>
+        </div>
+      )}
 
       {/* Load more trigger */}
       <div ref={loadMoreRef} className="py-8">
@@ -169,4 +268,3 @@ export function VideoFeed({ initialVideos, initialHasMore, initialNextCursor }: 
     </div>
   );
 }
-

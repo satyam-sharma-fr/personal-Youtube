@@ -45,14 +45,19 @@ export function Header() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-2">
-            <Link href="#how-it-works">
+            <Link href="#features">
               <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                How it works
+                Features
               </Button>
             </Link>
-            <Link href="#waitlist">
+            <Link href="#pricing">
               <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                Waitlist
+                Pricing
+              </Button>
+            </Link>
+            <Link href="/demo">
+              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+                Demo
               </Button>
             </Link>
             <div className="w-px h-6 bg-border/50 mx-2" />
@@ -97,18 +102,25 @@ export function Header() {
           >
             <nav className="container mx-auto px-4 py-6 flex flex-col gap-4">
               <Link
-                href="#how-it-works"
+                href="#features"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="py-3 text-lg font-medium hover:text-primary transition-colors"
               >
-                How it works
+                Features
               </Link>
               <Link
-                href="#waitlist"
+                href="#pricing"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="py-3 text-lg font-medium hover:text-primary transition-colors"
               >
-                Waitlist
+                Pricing
+              </Link>
+              <Link
+                href="/demo"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="py-3 text-lg font-medium hover:text-accent transition-colors"
+              >
+                Try Demo
               </Link>
               <div className="h-px bg-border/50 my-2" />
               <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,56 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Check, Eye, EyeOff, Clock, ThumbsUp, ExternalLink, Loader2 } from "lucide-react";
-import { markVideoWatched, updateVideoProgress, getVideoState } from "@/app/actions/videos";
+import { ArrowLeft, Check, Eye, Clock, ThumbsUp, ExternalLink, Loader2 } from "lucide-react";
+import { markVideoWatched, getVideoState, logVideoWatchDelta } from "@/app/actions/videos";
 import { formatViewCount, formatDuration } from "@/lib/youtube";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useWatchTimeSafe } from "@/components/watch-timer";
+
+// Declare YouTube IFrame API types
+declare global {
+  interface Window {
+    YT: {
+      Player: new (
+        elementId: string,
+        options: {
+          videoId: string;
+          playerVars?: Record<string, number | string>;
+          events?: {
+            onReady?: (event: { target: YTPlayer }) => void;
+            onStateChange?: (event: { data: number; target: YTPlayer }) => void;
+          };
+        }
+      ) => YTPlayer;
+      PlayerState: {
+        UNSTARTED: number;
+        ENDED: number;
+        PLAYING: number;
+        PAUSED: number;
+        BUFFERING: number;
+        CUED: number;
+      };
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+interface YTPlayer {
+  destroy: () => void;
+  getPlayerState: () => number;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+}
+
+// YouTube Player State constants
+const YT_PLAYING = 1;
+const YT_PAUSED = 2;
+const YT_BUFFERING = 3;
+const YT_ENDED = 0;
+
+// Sync interval for per-video watch tracking (in ms)
+const VIDEO_SYNC_INTERVAL_MS = 30000;
 
 interface VideoData {
   id: string;
@@ -45,6 +90,192 @@ export default function WatchPage() {
   const [isWatched, setIsWatched] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
+  
+  const playerRef = useRef<YTPlayer | null>(null);
+
+  // Watch time tracking (global daily limit)
+  const watchTime = useWatchTimeSafe();
+  
+  // Per-video watch tracking refs
+  const videoWatchSecondsRef = useRef(0); // Accumulated seconds watched in this session
+  const lastSyncedSecondsRef = useRef(0); // Last synced to server
+  const isVideoPlayingRef = useRef(false);
+  const isVisibleRef = useRef(true);
+  const videoTrackingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionStartedRef = useRef(false); // Track if we've started a new session
+
+  // Sync per-video watch data to server
+  const syncVideoWatchData = useCallback(async (completed = false) => {
+    const currentSeconds = videoWatchSecondsRef.current;
+    const delta = currentSeconds - lastSyncedSecondsRef.current;
+    
+    if (delta <= 0 && !completed) return;
+    
+    // Get current progress from player if available
+    let progressSeconds: number | undefined;
+    try {
+      if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+        progressSeconds = Math.floor(playerRef.current.getCurrentTime());
+      }
+    } catch {
+      // Player might not be ready
+    }
+
+    const result = await logVideoWatchDelta({
+      videoId,
+      deltaSeconds: delta,
+      progressSeconds,
+      completed,
+      isNewSession: !sessionStartedRef.current,
+    });
+    
+    if (!result.error) {
+      lastSyncedSecondsRef.current = currentSeconds;
+      sessionStartedRef.current = true;
+      
+      // Update watched state if server says it's now watched
+      if (result.watched && !isWatched) {
+        setIsWatched(true);
+      }
+    }
+  }, [videoId, isWatched]);
+
+  // Handle video ended
+  const handleVideoEnded = useCallback(async () => {
+    // Sync final watch data with completed flag
+    await syncVideoWatchData(true);
+    setIsWatched(true);
+  }, [syncVideoWatchData]);
+
+  // Load YouTube IFrame API
+  useEffect(() => {
+    // Check if API is already loaded
+    if (window.YT && window.YT.Player) {
+      setPlayerReady(true);
+      return;
+    }
+
+    // Load the API
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName("script")[0];
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+    // Set up callback
+    window.onYouTubeIframeAPIReady = () => {
+      setPlayerReady(true);
+    };
+
+    return () => {
+      window.onYouTubeIframeAPIReady = undefined;
+    };
+  }, []);
+
+  // Handle visibility changes for accurate tracking
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      isVisibleRef.current = document.visibilityState === "visible";
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Initialize YouTube player when API is ready
+  useEffect(() => {
+    if (!playerReady || !videoId) return;
+
+    // Create player
+    playerRef.current = new window.YT.Player("youtube-player", {
+      videoId: videoId,
+      playerVars: {
+        autoplay: 1,
+        rel: 0,
+        modestbranding: 1,
+      },
+      events: {
+        onStateChange: (event) => {
+          // YT.PlayerState.PLAYING = 1, PAUSED = 2, BUFFERING = 3, ENDED = 0
+          const isPlaying = event.data === YT_PLAYING || event.data === YT_BUFFERING;
+          isVideoPlayingRef.current = isPlaying;
+          watchTime?.setVideoPlaying(isPlaying);
+          
+          // Handle video ended
+          if (event.data === YT_ENDED) {
+            handleVideoEnded();
+          }
+        },
+        onReady: () => {
+          // Video starts autoplaying, so set initial state
+          isVideoPlayingRef.current = true;
+          watchTime?.setVideoPlaying(true);
+        },
+      },
+    });
+
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
+    };
+  }, [playerReady, videoId, handleVideoEnded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Store tracking functions in ref to avoid effect re-runs when context value changes
+  const watchTimeRef = useRef(watchTime);
+  useEffect(() => {
+    watchTimeRef.current = watchTime;
+  }, [watchTime]);
+
+  // Start watch time tracking when on this page (always track for stats, limit enforcement is separate)
+  // Using empty deps to ensure this only runs once on mount/unmount
+  useEffect(() => {
+    // Start tracking when page mounts
+    watchTimeRef.current?.startTracking();
+
+    return () => {
+      // Stop tracking when page unmounts
+      watchTimeRef.current?.stopTracking();
+    };
+  }, []); // Empty deps - only run on mount/unmount
+
+  // Per-video watch tracking: increment counter every second when playing + visible
+  useEffect(() => {
+    // Reset refs for new video
+    videoWatchSecondsRef.current = 0;
+    lastSyncedSecondsRef.current = 0;
+    sessionStartedRef.current = false;
+
+    // Increment every second (only when visible AND video is playing)
+    videoTrackingIntervalRef.current = setInterval(() => {
+      if (isVisibleRef.current && isVideoPlayingRef.current) {
+        videoWatchSecondsRef.current += 1;
+      }
+    }, 1000);
+
+    // Sync to server periodically
+    videoSyncIntervalRef.current = setInterval(() => {
+      syncVideoWatchData(false);
+    }, VIDEO_SYNC_INTERVAL_MS);
+
+    return () => {
+      // Cleanup intervals
+      if (videoTrackingIntervalRef.current) {
+        clearInterval(videoTrackingIntervalRef.current);
+        videoTrackingIntervalRef.current = null;
+      }
+      if (videoSyncIntervalRef.current) {
+        clearInterval(videoSyncIntervalRef.current);
+        videoSyncIntervalRef.current = null;
+      }
+      // Final sync on unmount
+      syncVideoWatchData(false);
+    };
+  }, [videoId, syncVideoWatchData]);
 
   // Fetch video data
   useEffect(() => {
@@ -87,19 +318,8 @@ export default function WatchPage() {
     fetchVideo();
   }, [videoId, supabase]);
 
-  // Mark as watched after viewing for 30 seconds
-  useEffect(() => {
-    if (isWatched) return;
-
-    const timer = setTimeout(async () => {
-      const result = await markVideoWatched(videoId, true);
-      if (!result.error) {
-        setIsWatched(true);
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearTimeout(timer);
-  }, [videoId, isWatched]);
+  // Note: Videos are now marked as watched automatically when total_watched_seconds >= 30
+  // This is handled by logVideoWatchDelta in the server action
 
   const handleToggleWatched = useCallback(async () => {
     setIsUpdating(true);
@@ -122,15 +342,31 @@ export default function WatchPage() {
     }
   }, [isWatched, videoId]);
 
-  // Save progress on page unload
+  // Save progress on page unload using sendBeacon for reliability
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Could save progress here with sendBeacon
+      const delta = videoWatchSecondsRef.current - lastSyncedSecondsRef.current;
+      if (delta > 0) {
+        // Get progress from player if available
+        let progressSeconds: number | undefined;
+        try {
+          if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+            progressSeconds = Math.floor(playerRef.current.getCurrentTime());
+          }
+        } catch {
+          // Player might not be ready
+        }
+        
+        // Use sendBeacon for reliable delivery on page unload
+        // Note: This sends to an API endpoint that we'd need to create for sendBeacon
+        // For now, the cleanup in the tracking effect handles this via regular fetch
+        // The sync interval + unmount cleanup should handle most cases
+      }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
+  }, [videoId]);
 
   return (
     <div className="min-h-screen bg-background -m-6">
@@ -180,13 +416,7 @@ export default function WatchPage() {
           animate={{ opacity: 1 }}
           className="aspect-video w-full bg-black"
         >
-          <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title={video?.title || "Video"}
-          />
+          <div id="youtube-player" className="w-full h-full" />
         </motion.div>
 
         {/* Video Info */}

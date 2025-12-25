@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="learnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5b2c6f;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7d3c98;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a569bd;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="learnPattern" patternUnits="userSpaceOnUse" width="80" height="80">
+      <circle cx="40" cy="40" r="1.5" fill="rgba(255,255,255,0.06)"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="450" fill="url(#learnGrad)"/>
+  <rect width="800" height="450" fill="url(#learnPattern)"/>
+  <!-- Book/graduation icon -->
+  <g transform="translate(570, 270)" opacity="0.15">
+    <!-- Open book -->
+    <path d="M0 30 Q60 0 120 30 L120 110 Q60 80 0 110 Z" fill="white"/>
+    <line x1="60" y1="15" x2="60" y2="95" stroke="rgba(93,63,111,0.3)" stroke-width="2"/>
+    <!-- Graduation cap -->
+    <polygon points="60,0 120,25 60,50 0,25" fill="white" transform="translate(0,-50)"/>
+    <rect x="55" y="-25" width="10" height="30" fill="white"/>
+  </g>
+  <!-- Decorative elements -->
+  <circle cx="100" cy="380" r="30" fill="rgba(255,255,255,0.05)"/>
+  <circle cx="160" cy="400" r="20" fill="rgba(255,255,255,0.03)"/>
+</svg>
+

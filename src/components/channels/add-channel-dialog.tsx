@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +20,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Loader2, Users, ExternalLink } from "lucide-react";
+import { Plus, Search, Loader2, Users, ExternalLink, X, Tag, Check } from "lucide-react";
 import { addChannel, searchChannels } from "@/app/actions/channels";
+import { getUserCategories, createCategory } from "@/app/actions/categories";
 import { formatSubscriberCount } from "@/lib/youtube";
 import type { YouTubeChannelData } from "@/lib/youtube";
+import type { ChannelCategory } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 interface AddChannelDialogProps {
   children?: React.ReactNode;
@@ -35,7 +39,61 @@ export function AddChannelDialog({ children }: AddChannelDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<YouTubeChannelData[]>([]);
+  const [categories, setCategories] = useState<ChannelCategory[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const router = useRouter();
+
+  // Load categories when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadCategories();
+    } else {
+      // Reset state when dialog closes
+      setSelectedCategoryIds([]);
+      setNewCategoryName("");
+      setUrlInput("");
+      setSearchQuery("");
+      setSearchResults([]);
+    }
+  }, [open]);
+
+  const loadCategories = async () => {
+    const result = await getUserCategories();
+    if (result.categories) {
+      setCategories(result.categories);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    setIsCreatingCategory(true);
+    try {
+      const result = await createCategory(newCategoryName.trim());
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.category) {
+        setCategories((prev) => [...prev, result.category!].sort((a, b) => a.name.localeCompare(b.name)));
+        setSelectedCategoryIds((prev) => [...prev, result.category!.id]);
+        setNewCategoryName("");
+        toast.success(`Created category "${result.category.name}"`);
+      }
+    } catch {
+      toast.error("Failed to create category");
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handleAddByUrl = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,12 +101,13 @@ export function AddChannelDialog({ children }: AddChannelDialogProps) {
 
     setIsLoading(true);
     try {
-      const result = await addChannel(urlInput);
+      const result = await addChannel(urlInput, selectedCategoryIds);
       if (result.error) {
         toast.error(result.error);
       } else {
         toast.success(`Added ${result.channel?.title || "channel"} to your subscriptions`);
         setUrlInput("");
+        setSelectedCategoryIds([]);
         setOpen(false);
         router.refresh();
       }
@@ -81,7 +140,7 @@ export function AddChannelDialog({ children }: AddChannelDialogProps) {
   const handleAddFromSearch = async (channel: YouTubeChannelData) => {
     setIsLoading(true);
     try {
-      const result = await addChannel(channel.channelId);
+      const result = await addChannel(channel.channelId, selectedCategoryIds);
       if (result.error) {
         toast.error(result.error);
       } else {
@@ -132,9 +191,21 @@ export function AddChannelDialog({ children }: AddChannelDialogProps) {
                   disabled={isLoading}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Paste a YouTube channel URL, handle (@username), or channel ID
+                  Paste a YouTube channel URL (including /channel/, /@handle, /user/, or /c/), a handle (@username), or a channel ID
                 </p>
               </div>
+
+              {/* Category Selection */}
+              <CategorySelector
+                categories={categories}
+                selectedCategoryIds={selectedCategoryIds}
+                onToggleCategory={toggleCategory}
+                newCategoryName={newCategoryName}
+                onNewCategoryNameChange={setNewCategoryName}
+                onCreateCategory={handleCreateCategory}
+                isCreatingCategory={isCreatingCategory}
+              />
+
               <DialogFooter>
                 <Button type="submit" disabled={isLoading || !urlInput.trim()}>
                   {isLoading ? (
@@ -171,6 +242,19 @@ export function AddChannelDialog({ children }: AddChannelDialogProps) {
               </div>
             </form>
 
+            {/* Category Selection for Search Tab */}
+            <div className="mt-4">
+              <CategorySelector
+                categories={categories}
+                selectedCategoryIds={selectedCategoryIds}
+                onToggleCategory={toggleCategory}
+                newCategoryName={newCategoryName}
+                onNewCategoryNameChange={setNewCategoryName}
+                onCreateCategory={handleCreateCategory}
+                isCreatingCategory={isCreatingCategory}
+              />
+            </div>
+
             <AnimatePresence mode="wait">
               {searchResults.length > 0 && (
                 <motion.div
@@ -179,7 +263,7 @@ export function AddChannelDialog({ children }: AddChannelDialogProps) {
                   exit={{ opacity: 0, y: -10 }}
                   className="mt-4"
                 >
-                  <ScrollArea className="h-[300px]">
+                  <ScrollArea className="h-[250px]">
                     <div className="space-y-2 pr-4">
                       {searchResults.map((channel, index) => (
                         <motion.div
@@ -237,3 +321,104 @@ export function AddChannelDialog({ children }: AddChannelDialogProps) {
   );
 }
 
+interface CategorySelectorProps {
+  categories: ChannelCategory[];
+  selectedCategoryIds: string[];
+  onToggleCategory: (categoryId: string) => void;
+  newCategoryName: string;
+  onNewCategoryNameChange: (name: string) => void;
+  onCreateCategory: () => void;
+  isCreatingCategory: boolean;
+}
+
+function CategorySelector({
+  categories,
+  selectedCategoryIds,
+  onToggleCategory,
+  newCategoryName,
+  onNewCategoryNameChange,
+  onCreateCategory,
+  isCreatingCategory,
+}: CategorySelectorProps) {
+  return (
+    <div className="space-y-3">
+      <Label className="flex items-center gap-2">
+        <Tag className="w-4 h-4" />
+        Categories (optional)
+      </Label>
+
+      {/* Selected categories */}
+      {selectedCategoryIds.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedCategoryIds.map((id) => {
+            const category = categories.find((c) => c.id === id);
+            if (!category) return null;
+            return (
+              <Badge
+                key={id}
+                variant="secondary"
+                className="cursor-pointer hover:bg-destructive/20 transition-colors"
+                onClick={() => onToggleCategory(id)}
+              >
+                {category.name}
+                <X className="w-3 h-3 ml-1" />
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Available categories */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {categories
+            .filter((c) => !selectedCategoryIds.includes(c.id))
+            .map((category) => (
+              <Badge
+                key={category.id}
+                variant="outline"
+                className={cn(
+                  "cursor-pointer transition-colors hover:bg-primary/10"
+                )}
+                onClick={() => onToggleCategory(category.id)}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                {category.name}
+              </Badge>
+            ))}
+        </div>
+      )}
+
+      {/* Quick create category */}
+      <div className="flex gap-2">
+        <Input
+          placeholder="Create new category..."
+          value={newCategoryName}
+          onChange={(e) => onNewCategoryNameChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onCreateCategory();
+            }
+          }}
+          disabled={isCreatingCategory}
+          className="h-8 text-sm"
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onCreateCategory}
+          disabled={isCreatingCategory || !newCategoryName.trim()}
+          className="h-8"
+        >
+          {isCreatingCategory ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Check className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}

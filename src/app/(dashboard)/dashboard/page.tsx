@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { VideoFeed } from "@/components/videos/video-feed";
+import { CategoryFilter } from "@/components/dashboard/category-filter";
 import { Button } from "@/components/ui/button";
-import { Plus, Tv } from "lucide-react";
+import { Plus, Tv, X, Tag } from "lucide-react";
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{ channel?: string; category?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const { channel: selectedChannelId, category: selectedCategoryId } = await searchParams;
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,8 +22,22 @@ export default async function DashboardPage() {
   // Get user's subscribed channel IDs
   const { data: subscriptions } = await supabase
     .from("channel_subscriptions")
-    .select("channel_id")
+    .select(`
+      channel_id,
+      youtube_channels (
+        channel_id,
+        title,
+        thumbnail_url
+      )
+    `)
     .eq("user_id", user.id);
+
+  // Get user's categories
+  const { data: categories } = await supabase
+    .from("channel_categories")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("name", { ascending: true });
 
   const channelIds = subscriptions?.map((s) => s.channel_id) || [];
 
@@ -44,10 +64,105 @@ export default async function DashboardPage() {
     );
   }
 
-  // Get videos from subscribed channels using RPC
+  // Validate selectedChannelId is in user's subscriptions
+  const validChannelId = selectedChannelId && channelIds.includes(selectedChannelId) 
+    ? selectedChannelId 
+    : null;
+
+  // Validate selectedCategoryId is one of user's categories
+  const validCategoryId = selectedCategoryId && categories?.some((c) => c.id === selectedCategoryId)
+    ? selectedCategoryId
+    : null;
+
+  // Get channel info for header if filtering by channel
+  let selectedChannel: { title: string; thumbnail_url: string | null } | null = null;
+  if (validChannelId) {
+    const sub = subscriptions?.find((s) => s.channel_id === validChannelId);
+    if (sub?.youtube_channels) {
+      const ch = sub.youtube_channels as unknown as { title: string; thumbnail_url: string | null };
+      selectedChannel = { title: ch.title, thumbnail_url: ch.thumbnail_url };
+    }
+  }
+
+  // Get category info for header if filtering by category
+  let selectedCategory: { id: string; name: string } | null = null;
+  if (validCategoryId) {
+    const cat = categories?.find((c) => c.id === validCategoryId);
+    if (cat) {
+      selectedCategory = { id: cat.id, name: cat.name };
+    }
+  }
+
+  // Determine which channels to fetch videos from
+  let feedChannelIds: string[];
+  
+  if (validChannelId) {
+    // Filter by specific channel
+    feedChannelIds = [validChannelId];
+  } else if (validCategoryId) {
+    // Filter by category - get channels in this category
+    const { data: categoryChannels } = await supabase
+      .from("channel_category_channels")
+      .select("channel_id")
+      .eq("user_id", user.id)
+      .eq("category_id", validCategoryId);
+
+    const categoryChannelIds = categoryChannels?.map((c) => c.channel_id) || [];
+    // Only include channels that are still subscribed
+    feedChannelIds = categoryChannelIds.filter((id) => channelIds.includes(id));
+    
+    if (feedChannelIds.length === 0) {
+      // No channels in this category
+      return (
+        <div>
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Tag className="w-6 h-6" />
+                  {selectedCategory?.name}
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  <span className="flex items-center gap-2">
+                    No channels in this category
+                    <Link href="/dashboard">
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                        <X className="w-3 h-3 mr-1" />
+                        Clear filter
+                      </Button>
+                    </Link>
+                  </span>
+                </p>
+              </div>
+              {categories && categories.length > 0 && (
+                <CategoryFilter categories={categories} selectedCategoryId={validCategoryId} />
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Tag className="w-12 h-12 text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No channels in this category</h2>
+            <p className="text-muted-foreground mb-4">
+              Add channels to the "{selectedCategory?.name}" category to see videos here.
+            </p>
+            <Link href="/channels">
+              <Button variant="outline">
+                Manage Channels
+              </Button>
+            </Link>
+          </div>
+        </div>
+      );
+    }
+  } else {
+    // All subscribed channels
+    feedChannelIds = channelIds;
+  }
+
+  // Get videos from selected channels using RPC
   const { data: videosData } = await supabase.rpc("get_user_feed", {
     p_user_id: user.id,
-    p_channel_ids: channelIds,
+    p_channel_ids: feedChannelIds,
     p_limit: 21,
   });
 
@@ -98,21 +213,54 @@ export default async function DashboardPage() {
     ? displayVideos[displayVideos.length - 1].published_at 
     : null;
 
+  // Determine filter display
+  const isFiltering = selectedChannel || selectedCategory;
+  const filterTitle = selectedChannel 
+    ? selectedChannel.title 
+    : selectedCategory 
+      ? selectedCategory.name 
+      : "Your Feed";
+
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">Your Feed</h1>
-        <p className="text-muted-foreground mt-1">
-          Latest videos from your {channelIds.length} subscribed channel{channelIds.length !== 1 ? "s" : ""}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              {selectedCategory && <Tag className="w-6 h-6" />}
+              {filterTitle}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {isFiltering ? (
+                <span className="flex items-center gap-2">
+                  {selectedChannel 
+                    ? "Showing videos from this channel" 
+                    : `Showing videos from ${feedChannelIds.length} channel${feedChannelIds.length !== 1 ? "s" : ""} in this category`}
+                  <Link href="/dashboard">
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                      <X className="w-3 h-3 mr-1" />
+                      Clear filter
+                    </Button>
+                  </Link>
+                </span>
+              ) : (
+                <>Latest videos from your {channelIds.length} subscribed channel{channelIds.length !== 1 ? "s" : ""}</>
+              )}
+            </p>
+          </div>
+          {categories && categories.length > 0 && (
+            <CategoryFilter categories={categories} selectedCategoryId={validCategoryId} />
+          )}
+        </div>
       </div>
 
       <VideoFeed
         initialVideos={videosWithState}
         initialHasMore={hasMore}
         initialNextCursor={nextCursor}
+        channelId={validChannelId || undefined}
+        categoryId={validCategoryId || undefined}
       />
     </div>
   );
 }
-

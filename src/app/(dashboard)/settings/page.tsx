@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Check, Crown, CreditCard, Mail, User } from "lucide-react";
+import { Check, Crown, CreditCard, Settings as SettingsIcon, Bell, Palette, Shield } from "lucide-react";
+import { HomeDestinationSetting } from "@/components/settings/home-destination-setting";
 
 const tiers = {
   free: {
@@ -63,64 +63,74 @@ export default async function SettingsPage() {
   const currentTier = (profile?.subscription_tier || "free") as keyof typeof tiers;
   const tierInfo = tiers[currentTier];
 
-  const initials = profile?.full_name
-    ? profile.full_name
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : user.email?.slice(0, 2).toUpperCase() || "U";
-
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your account and subscription</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <SettingsIcon className="w-6 h-6" />
+          Settings
+        </h1>
+        <p className="text-muted-foreground mt-1">App preferences and subscription</p>
       </div>
 
-      {/* Profile Section */}
+      {/* Quick link to Profile */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Looking for your profile?</h3>
+              <p className="text-sm text-muted-foreground">
+                Manage categories, watch limits, and view stats on your profile page
+              </p>
+            </div>
+            <Link href="/profile">
+              <Button variant="default" size="sm">
+                Go to Profile
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Home Button Destination */}
+      <HomeDestinationSetting />
+
+      {/* App Preferences (placeholder for future settings) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Profile
+            <Palette className="w-5 h-5" />
+            Appearance
           </CardTitle>
-          <CardDescription>Your account information</CardDescription>
+          <CardDescription>Customize how the app looks</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "User"} />
-              <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/50">
             <div>
-              <h3 className="font-semibold text-lg">{profile?.full_name || "User"}</h3>
-              <p className="text-muted-foreground flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                {user.email}
-              </p>
+              <p className="font-medium">Theme</p>
+              <p className="text-sm text-muted-foreground">System preference (dark mode)</p>
             </div>
+            <Badge variant="secondary">Coming soon</Badge>
           </div>
+        </CardContent>
+      </Card>
 
-          <Separator />
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
+      {/* Notifications (placeholder) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5" />
+            Notifications
+          </CardTitle>
+          <CardDescription>Manage notification preferences</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/50">
             <div>
-              <p className="text-muted-foreground">Member since</p>
-              <p className="font-medium">
-                {new Date(profile?.created_at || user.created_at).toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
+              <p className="font-medium">Push Notifications</p>
+              <p className="text-sm text-muted-foreground">Get notified about new videos</p>
             </div>
-            <div>
-              <p className="text-muted-foreground">Channels subscribed</p>
-              <p className="font-medium">{channelCount || 0}</p>
-            </div>
+            <Badge variant="secondary">Coming soon</Badge>
           </div>
         </CardContent>
       </Card>
@@ -203,6 +213,37 @@ export default async function SettingsPage() {
         </div>
       )}
 
+      {/* Privacy & Data */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Privacy & Data
+          </CardTitle>
+          <CardDescription>Manage your data and privacy settings</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/50">
+            <div>
+              <p className="font-medium">Export Data</p>
+              <p className="text-sm text-muted-foreground">Download all your data</p>
+            </div>
+            <Button variant="outline" size="sm" disabled>
+              Export
+            </Button>
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-red-500/5 border border-red-500/20">
+            <div>
+              <p className="font-medium text-red-600 dark:text-red-400">Delete Account</p>
+              <p className="text-sm text-muted-foreground">Permanently delete your account and data</p>
+            </div>
+            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950" disabled>
+              Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-dashed">
         <CardContent className="pt-6">
           <p className="text-center text-sm text-muted-foreground">
@@ -213,4 +254,3 @@ export default async function SettingsPage() {
     </div>
   );
 }
-

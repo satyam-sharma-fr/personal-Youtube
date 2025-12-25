@@ -14,11 +14,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Play, Menu, Settings, LogOut, User as UserIcon, CreditCard } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Play, Menu, Settings, LogOut, User as UserIcon, CreditCard, PanelLeftClose, PanelLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
 import { DashboardSidebarContent } from "./dashboard-sidebar";
+import { useSidebar, useChannels, useCategories } from "./dashboard-shell";
+import { NavTimer } from "@/components/watch-timer";
+import { useHomeDestination } from "@/hooks/useHomeDestination";
 
 interface DashboardNavProps {
   user: User;
@@ -28,6 +32,10 @@ interface DashboardNavProps {
 export function DashboardNav({ user, profile }: DashboardNavProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { isCollapsed, toggleSidebar } = useSidebar();
+  const channels = useChannels();
+  const categories = useCategories();
+  const { homeHref } = useHomeDestination();
 
   const handleSignOut = async () => {
     try {
@@ -53,7 +61,7 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
     <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="h-full px-4 flex items-center justify-between">
         {/* Left: Menu + Logo */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
@@ -62,12 +70,35 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
-              <DashboardSidebarContent />
+              <DashboardSidebarContent channels={channels} categories={categories} />
             </SheetContent>
           </Sheet>
 
+          {/* Desktop sidebar toggle */}
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="hidden md:flex"
+                  onClick={toggleSidebar}
+                >
+                  {isCollapsed ? (
+                    <PanelLeft className="h-5 w-5" />
+                  ) : (
+                    <PanelLeftClose className="h-5 w-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href={homeHref} className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Play className="w-4 h-4 text-primary fill-primary" />
             </div>
@@ -75,8 +106,11 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
           </Link>
         </div>
 
-        {/* Right: User menu */}
-        <div className="flex items-center gap-2">
+        {/* Right: Watch Timer + User menu */}
+        <div className="flex items-center gap-3">
+          {/* Watch Time Timer */}
+          <NavTimer />
+
           {profile?.subscription_tier === "free" && (
             <Link href="/settings">
               <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -139,4 +173,3 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
     </header>
   );
 }
-

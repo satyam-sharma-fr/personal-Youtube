@@ -26,9 +26,11 @@ export interface YouTubeVideoData {
 }
 
 /**
- * Parse channel input (URL, handle, or ID)
+ * Parse channel input (URL, handle, custom URL, username, or ID)
  */
-export function parseChannelInput(input: string): { type: "id" | "handle" | "username"; value: string } | null {
+export function parseChannelInput(
+  input: string
+): { type: "id" | "handle" | "username" | "customUrl"; value: string } | null {
   const trimmed = input.trim();
   
   // YouTube channel URL patterns
@@ -44,6 +46,7 @@ export function parseChannelInput(input: string): { type: "id" | "handle" | "use
     if (match) {
       if (type === "channelId") return { type: "id", value: match[1] };
       if (type === "handle") return { type: "handle", value: match[1] };
+      if (type === "customUrl") return { type: "customUrl", value: match[1] };
       return { type: "username", value: match[1] };
     }
   }
@@ -60,6 +63,68 @@ export function parseChannelInput(input: string): { type: "id" | "handle" | "use
 
   // Assume it's a handle/username
   return { type: "handle", value: trimmed };
+}
+
+/**
+ * Get channel info by legacy username (/user/...)
+ * Note: This is legacy and may not work for all channels, but it's worth trying.
+ */
+export async function getChannelByUsername(username: string): Promise<YouTubeChannelData | null> {
+  if (!YOUTUBE_API_KEY) {
+    throw new Error("YouTube API key is not configured");
+  }
+
+  const clean = username.trim();
+  if (!clean) return null;
+
+  const res = await fetch(
+    `${BASE_URL}/channels?part=snippet,statistics,contentDetails&forUsername=${encodeURIComponent(clean)}&key=${YOUTUBE_API_KEY}`
+  );
+
+  if (!res.ok) {
+    throw new Error(`YouTube API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (!data.items?.[0]) return null;
+
+  const channel = data.items[0];
+  return {
+    channelId: channel.id,
+    title: channel.snippet.title,
+    description: channel.snippet.description,
+    thumbnailUrl: channel.snippet.thumbnails.medium?.url || channel.snippet.thumbnails.default?.url,
+    subscriberCount: channel.statistics.subscriberCount,
+    videoCount: channel.statistics.videoCount,
+    uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads,
+    customUrl: channel.snippet.customUrl,
+  };
+}
+
+/**
+ * Resolve a /c/... custom URL via search (there is no direct API parameter).
+ */
+export async function getChannelByCustomUrl(customUrl: string): Promise<YouTubeChannelData | null> {
+  if (!YOUTUBE_API_KEY) {
+    throw new Error("YouTube API key is not configured");
+  }
+
+  const clean = customUrl.trim();
+  if (!clean) return null;
+
+  const searchRes = await fetch(
+    `${BASE_URL}/search?part=snippet&type=channel&q=${encodeURIComponent(clean)}&maxResults=1&key=${YOUTUBE_API_KEY}`
+  );
+
+  if (!searchRes.ok) {
+    throw new Error(`YouTube API error: ${searchRes.status}`);
+  }
+
+  const searchData = await searchRes.json();
+  const channelId = searchData.items?.[0]?.id?.channelId as string | undefined;
+  if (!channelId) return null;
+
+  return getChannelById(channelId);
 }
 
 /**
