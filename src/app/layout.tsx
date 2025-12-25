@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
-import { ConvexClientProvider } from "./ConvexClientProvider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -17,8 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "FocusTube - Distraction-Free YouTube",
-  description: "Watch videos only from channels you love. No distractions, no recommendations, just pure content.",
-  keywords: ["youtube", "distraction-free", "focus", "productivity", "video"],
+  description: "Watch only the channels you care about. No recommendations, no distractions.",
 };
 
 export default function RootLayout({
@@ -27,17 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ConvexAuthNextjsServerProvider>
-      <html lang="en" className="dark">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
-        >
-          <ConvexClientProvider>
-            {children}
-            <Toaster position="bottom-right" richColors />
-          </ConvexClientProvider>
-        </body>
-      </html>
-    </ConvexAuthNextjsServerProvider>
+    <html lang="en" className="dark">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
+      >
+        {children}
+        <Toaster richColors position="bottom-right" />
+      </body>
+    </html>
   );
 }
