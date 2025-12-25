@@ -14,37 +14,12 @@ import { formatViewCount, formatDuration } from "@/lib/youtube";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-// Declare YouTube IFrame API types
-declare global {
-  interface Window {
-    YT: {
-      Player: new (
-        elementId: string,
-        options: {
-          videoId: string;
-          playerVars?: Record<string, number | string>;
-          events?: {
-            onReady?: (event: { target: YTPlayer }) => void;
-            onStateChange?: (event: { data: number; target: YTPlayer }) => void;
-          };
-        }
-      ) => YTPlayer;
-      PlayerState: {
-        UNSTARTED: number;
-        ENDED: number;
-        PLAYING: number;
-        PAUSED: number;
-        BUFFERING: number;
-        CUED: number;
-      };
-    };
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
+// YTPlayer type (YouTube IFrame API types are declared globally in the main watch page)
 interface YTPlayer {
   destroy: () => void;
   getPlayerState: () => number;
+  getCurrentTime: () => number;
+  getDuration: () => number;
 }
 
 interface VideoData {
