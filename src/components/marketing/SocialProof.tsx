@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Briefcase, GraduationCap, Code2, Coffee } from "lucide-react";
 import { fadeUp, staggerContainer, scaleIn } from "./motion";
 
@@ -9,116 +9,84 @@ const audiences = [
     icon: Briefcase,
     title: "Deep Workers",
     description: "Protect your focus time from infinite scroll.",
+    color: "text-red-600",
+    bgColor: "bg-red-50",
+    borderColor: "border-red-100",
   },
   {
     icon: GraduationCap,
     title: "Students",
     description: "Learn from educational channels without distraction.",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
+    borderColor: "border-teal-100",
   },
   {
     icon: Code2,
     title: "Builders",
     description: "Stay updated on tech without the rabbit holes.",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-emerald-100",
   },
   {
     icon: Coffee,
-    title: "Intentional Viewers",
-    description: "Watch what matters, then get back to life.",
-  },
-];
-
-const testimonials = [
-  {
-    quote: "Finally, YouTube without the guilt spiral. I watch what I came for and actually close the tab.",
-    author: "Alex R.",
-    role: "Software Engineer",
-  },
-  {
-    quote: "My screen time dropped 40% but I'm learning more than ever. That's the magic.",
-    author: "Sarah M.",
-    role: "Graduate Student",
-  },
-  {
-    quote: "Simple, fast, focused. This is what YouTube should have been all along.",
-    author: "James K.",
-    role: "Product Designer",
+    title: "Casual Viewers",
+    description: "Enjoy your favorite content without the noise.",
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    borderColor: "border-amber-100",
   },
 ];
 
 export function SocialProof() {
-  return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
-      {/* Subtle background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-accent/5 to-transparent pointer-events-none" />
+  const shouldReduceMotion = useReducedMotion();
 
+  return (
+    <section className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-zinc-50 to-white">
+      {/* Background pattern */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none" />
+      
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
+          className="max-w-4xl mx-auto text-center mb-16"
         >
-          {/* Section header */}
-          <motion.div variants={fadeUp} className="text-center mb-20">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              Built for the{" "}
-              <span className="text-accent">intentional.</span>
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              Join others who've taken back control of their attention.
-            </p>
-          </motion.div>
-
-          {/* Audience cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-20 max-w-4xl mx-auto">
-            {audiences.map((audience, i) => (
-              <motion.div
-                key={audience.title}
-                variants={scaleIn}
-                whileHover={{ y: -4 }}
-                className="p-6 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm text-center group hover:border-accent/30 transition-colors"
-              >
-                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <audience.icon className="w-6 h-6 text-accent" />
-                </div>
-                <h3 className="font-semibold mb-1">{audience.title}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {audience.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Testimonials */}
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {testimonials.map((testimonial, i) => (
-              <motion.div
-                key={testimonial.author}
-                variants={fadeUp}
-                className="relative p-6 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm"
-              >
-                {/* Quote mark */}
-                <div className="absolute -top-3 left-6 text-5xl text-accent/20 font-serif">
-                  "
-                </div>
-                <p className="text-foreground/90 mb-6 pt-4 leading-relaxed">
-                  {testimonial.quote}
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-accent/30" />
-                  <div>
-                    <div className="font-medium text-sm">{testimonial.author}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {testimonial.role}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          <motion.span variants={fadeUp} className="inline-block text-sm font-medium text-red-600 mb-3 tracking-wider uppercase">
+            Who it's for
+          </motion.span>
+          <motion.h2 variants={fadeUp} className="font-display text-3xl md:text-5xl font-semibold tracking-tight mb-4 text-zinc-900">
+            Built for{" "}
+            <span className="text-red-600">Focused Minds</span>
+          </motion.h2>
+          <motion.p variants={fadeUp} className="text-lg text-zinc-600 max-w-2xl mx-auto">
+            Whether you're working, studying, or just relaxing, FocusTube helps you cut through the noise.
+          </motion.p>
         </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {audiences.map((audience, i) => (
+            <motion.div
+              key={i}
+              variants={scaleIn}
+              whileHover={shouldReduceMotion ? {} : { y: -4, scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+              className={`relative p-6 rounded-2xl border ${audience.borderColor} bg-white shadow-sm hover:shadow-lg transition-shadow text-center flex flex-col items-center`}
+            >
+              <div className={`mb-4 p-3 rounded-full ${audience.bgColor}`}>
+                <audience.icon className={`w-6 h-6 ${audience.color}`} />
+              </div>
+              <h3 className="font-display text-lg font-semibold mb-2 text-zinc-900">
+                {audience.title}
+              </h3>
+              <p className="text-sm text-zinc-600">{audience.description}</p>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
-

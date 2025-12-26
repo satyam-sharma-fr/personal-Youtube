@@ -100,12 +100,12 @@ export default async function DashboardLayout({
       <ChannelsProvider channels={channels}>
         <CategoriesProvider categories={categories}>
           <WatchTimeProvider initialData={watchTimeData}>
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-zinc-50">
               <DashboardNav user={user} profile={profile} />
               <div className="flex">
                 <DashboardSidebar channels={channels} categories={categories} />
                 <main className="flex-1 ml-0 md:ml-[var(--sidebar-width)] pt-16 transition-[margin] duration-200">
-                  <div className="p-6">{children}</div>
+                  <div className="p-6 max-w-7xl mx-auto">{children}</div>
                 </main>
               </div>
             </div>

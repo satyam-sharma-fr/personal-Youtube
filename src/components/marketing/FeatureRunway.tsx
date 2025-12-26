@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
-import { GlassSurface } from "./glass/GlassSurface";
+import { useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { 
   Plus, 
   Grid3X3, 
@@ -11,69 +10,89 @@ import {
   Clock, 
   BarChart3,
   Check,
-  Tv,
   Filter,
-  Eye
+  Eye,
+  ArrowRight,
+  Tv,
 } from "lucide-react";
-import { fadeUp, staggerContainer } from "./motion";
+import { fadeUp, staggerContainer, zenEase } from "./motion";
+import { cn } from "@/lib/utils";
 
 const features = [
   {
     id: "channels",
     icon: Plus,
     title: "Add your channels",
-    description: "Search and add only the YouTube channels you actually want to follow. No algorithm suggestions—just your picks.",
-    accentColor: "text-primary",
-    bgColor: "bg-primary/10",
+    description: "Search and add only the YouTube channels you actually want to follow.",
+    accentColor: "text-red-600",
+    bgColor: "bg-red-50",
+    borderColor: "border-red-200",
+    activeBg: "bg-red-50",
+    shadowColor: "shadow-red-100/50",
   },
   {
     id: "categories",
     icon: Grid3X3,
     title: "Organize with categories",
-    description: "Create custom categories like 'Learning', 'Entertainment', or 'News'. Filter your feed by mood or focus area.",
-    accentColor: "text-accent",
-    bgColor: "bg-accent/10",
+    description: "Create custom categories like 'Learning', 'Entertainment', or 'News'.",
+    accentColor: "text-teal-600",
+    bgColor: "bg-teal-50",
+    borderColor: "border-teal-200",
+    activeBg: "bg-teal-50",
+    shadowColor: "shadow-teal-100/50",
   },
   {
     id: "feed",
     icon: ListVideo,
     title: "Browse your clean feed",
-    description: "A chronological feed with only videos from channels you selected. No recommendations, no distractions.",
-    accentColor: "text-chart-3",
-    bgColor: "bg-chart-3/10",
+    description: "A chronological feed with only videos from your selected channels.",
+    accentColor: "text-emerald-600",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-emerald-200",
+    activeBg: "bg-emerald-50",
+    shadowColor: "shadow-emerald-100/50",
   },
   {
     id: "watch",
     icon: Play,
     title: "Watch with intent",
-    description: "No sidebar suggestions. No autoplay into random videos. Watch what you came for, then move on with your day.",
-    accentColor: "text-primary",
-    bgColor: "bg-primary/10",
+    description: "No sidebar suggestions. No autoplay. Watch what you came for.",
+    accentColor: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+    borderColor: "border-indigo-200",
+    activeBg: "bg-indigo-50",
+    shadowColor: "shadow-indigo-100/50",
   },
   {
     id: "timer",
     icon: Clock,
     title: "Set watch time limits",
-    description: "Define daily limits to stay focused. Get gentle nudges when approaching your limit. Snooze when you need to.",
-    accentColor: "text-emerald-500",
-    bgColor: "bg-emerald-500/10",
+    description: "Define daily limits. Get gentle nudges when approaching your limit.",
+    accentColor: "text-orange-600",
+    bgColor: "bg-orange-50",
+    borderColor: "border-orange-200",
+    activeBg: "bg-orange-50",
+    shadowColor: "shadow-orange-100/50",
   },
   {
     id: "stats",
     icon: BarChart3,
     title: "Track your progress",
-    description: "See your daily and weekly watch time stats. Celebrate wins. Build better habits over time.",
-    accentColor: "text-chart-4",
-    bgColor: "bg-chart-4/10",
+    description: "See your daily and weekly watch time stats. Build better habits.",
+    accentColor: "text-violet-600",
+    bgColor: "bg-violet-50",
+    borderColor: "border-violet-200",
+    activeBg: "bg-violet-50",
+    shadowColor: "shadow-violet-100/50",
   },
 ];
 
-// Mock preview components for each feature
+// Preview components for each feature
 function ChannelsPreview() {
   const channels = [
-    { name: "3Blue1Brown", initials: "3B" },
-    { name: "Fireship", initials: "FS" },
-    { name: "Veritasium", initials: "VE" },
+    { name: "3Blue1Brown", initials: "3B", avatar: "https://yt3.googleusercontent.com/ytc/AIdro_nFzgcTrxulXeYVmDXRAblMhvQ-MjI1aTXU3kqwQS5a=s176-c-k-c0x00ffffff-no-rj" },
+    { name: "Fireship", initials: "FS", avatar: "https://yt3.googleusercontent.com/ytc/AIdro_k_D9hKDXhJDNf1tSNJoXMTT8-OVx3jHfsmFnQOBA=s176-c-k-c0x00ffffff-no-rj" },
+    { name: "Veritasium", initials: "VE", avatar: "https://yt3.googleusercontent.com/ytc/AIdro_kED97yk3MKP6Abzc5u9pnNBWH8pKzYh-36EJNWBLpvhg=s176-c-k-c0x00ffffff-no-rj" },
   ];
   return (
     <div className="space-y-3">
@@ -83,23 +102,21 @@ function ChannelsPreview() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: i * 0.1 }}
-          className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/30"
+          className="flex items-center gap-3 p-3 rounded-xl bg-white border border-zinc-200 shadow-sm hover:shadow-md transition-shadow"
         >
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
-            {ch.initials}
-          </div>
-          <span className="font-medium">{ch.name}</span>
-          <Check className="w-4 h-4 text-accent ml-auto" />
+          <img src={ch.avatar} alt={ch.name} className="w-10 h-10 rounded-full" />
+          <span className="font-medium text-zinc-900">{ch.name}</span>
+          <Check className="w-4 h-4 text-teal-500 ml-auto" />
         </motion.div>
       ))}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="flex items-center gap-2 p-3 rounded-lg border border-dashed border-border/50 text-muted-foreground"
+        className="flex items-center gap-2 p-3 rounded-xl border-2 border-dashed border-zinc-200 text-zinc-400 hover:border-red-300 hover:text-red-500 transition-colors cursor-pointer"
       >
         <Plus className="w-5 h-5" />
-        <span className="text-sm">Add more channels...</span>
+        <span className="text-sm font-medium">Add more channels...</span>
       </motion.div>
     </div>
   );
@@ -107,9 +124,9 @@ function ChannelsPreview() {
 
 function CategoriesPreview() {
   const categories = [
-    { name: "Learning", count: 5, color: "bg-blue-500/20 text-blue-400" },
-    { name: "Tech", count: 3, color: "bg-purple-500/20 text-purple-400" },
-    { name: "Entertainment", count: 4, color: "bg-pink-500/20 text-pink-400" },
+    { name: "Learning", count: 5, color: "bg-red-100 text-red-600 border-red-200" },
+    { name: "Tech", count: 3, color: "bg-violet-100 text-violet-600 border-violet-200" },
+    { name: "Entertainment", count: 4, color: "bg-teal-100 text-teal-600 border-teal-200" },
   ];
   return (
     <div className="space-y-3">
@@ -119,13 +136,16 @@ function CategoriesPreview() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: i * 0.1 }}
-          className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/30"
+          className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
         >
-          <div className={`w-8 h-8 rounded-lg ${cat.color} flex items-center justify-center`}>
-            <Grid3X3 className="w-4 h-4" />
+          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", cat.color)}>
+            <Grid3X3 className="w-5 h-5" />
           </div>
-          <span className="font-medium">{cat.name}</span>
-          <span className="text-xs text-muted-foreground ml-auto">{cat.count} channels</span>
+          <div className="flex-1">
+            <span className="font-medium text-zinc-900 group-hover:text-zinc-700">{cat.name}</span>
+            <p className="text-xs text-zinc-500">{cat.count} channels</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors" />
         </motion.div>
       ))}
     </div>
@@ -133,27 +153,35 @@ function CategoriesPreview() {
 }
 
 function FeedPreview() {
+  const videos = [
+    { title: "Neural Networks Explained", channel: "3Blue1Brown", time: "2h ago" },
+    { title: "100 Seconds of React", channel: "Fireship", time: "4h ago" },
+    { title: "Why Roundabouts Are Great", channel: "Veritasium", time: "1d ago" },
+  ];
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 mb-4">
-        <Filter className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Showing: All channels</span>
+      <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-zinc-50 border border-zinc-100">
+        <Filter className="w-4 h-4 text-zinc-400" />
+        <span className="text-sm text-zinc-500">Showing all channels</span>
+        <span className="ml-auto text-xs text-teal-600 font-medium">3 videos</span>
       </div>
-      {[1, 2, 3].map((i) => (
+      {videos.map((video, i) => (
         <motion.div
-          key={i}
+          key={video.title}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.1 }}
-          className="flex gap-3 p-2 rounded-lg hover:bg-muted/20 transition-colors"
+          className="flex gap-3 p-3 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-sm transition-all cursor-pointer group"
         >
-          <div className="w-24 h-14 rounded-md bg-gradient-to-br from-muted/60 to-muted/30 flex items-center justify-center">
-            <Play className="w-5 h-5 text-muted-foreground/50" />
+          <div className="w-24 h-14 rounded-lg bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center">
+            <Play className="w-5 h-5 text-zinc-400 group-hover:text-red-500 transition-colors" />
           </div>
-          <div className="flex-1 space-y-1">
-            <div className="h-3 w-full bg-muted/50 rounded" />
-            <div className="h-2 w-2/3 bg-muted/30 rounded" />
-            <div className="h-2 w-1/3 bg-muted/20 rounded" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-zinc-900 text-sm truncate group-hover:text-red-600 transition-colors">
+              {video.title}
+            </div>
+            <div className="text-xs text-zinc-500">{video.channel}</div>
+            <div className="text-[10px] text-zinc-400 mt-0.5">{video.time}</div>
           </div>
         </motion.div>
       ))}
@@ -164,15 +192,35 @@ function FeedPreview() {
 function WatchPreview() {
   return (
     <div className="space-y-4">
-      <div className="aspect-video rounded-lg bg-gradient-to-br from-muted/60 to-muted/30 flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full bg-primary/80 flex items-center justify-center">
-          <Play className="w-5 h-5 text-primary-foreground fill-current ml-0.5" />
+      <div className="aspect-video rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center relative overflow-hidden">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center cursor-pointer hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30"
+        >
+          <Play className="w-6 h-6 text-white fill-current ml-1" />
+        </motion.div>
+        <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
+          <div className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "35%" }}
+              transition={{ duration: 1, delay: 0.5 }}
+              className="h-full bg-red-500 rounded-full"
+            />
+          </div>
+          <span className="text-white text-[10px] font-medium">5:23</span>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Eye className="w-4 h-4 text-accent" />
-        <span className="text-sm text-muted-foreground">No sidebar • No autoplay • No distractions</span>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="flex items-center gap-2 p-3 rounded-xl bg-teal-50 border border-teal-100"
+      >
+        <Eye className="w-4 h-4 text-teal-600" />
+        <span className="text-sm text-teal-700 font-medium">No sidebar • No autoplay • No distractions</span>
+      </motion.div>
     </div>
   );
 }
@@ -180,24 +228,43 @@ function WatchPreview() {
 function TimerPreview() {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full border-4 border-emerald-500 flex items-center justify-center">
-            <span className="text-sm font-bold text-emerald-500">38%</span>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="p-5 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200"
+      >
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <svg className="w-16 h-16 -rotate-90">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="#fed7aa" strokeWidth="6" />
+              <motion.circle
+                cx="32"
+                cy="32"
+                r="28"
+                fill="none"
+                stroke="#ea580c"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 28}
+                initial={{ strokeDashoffset: 2 * Math.PI * 28 }}
+                animate={{ strokeDashoffset: 2 * Math.PI * 28 * 0.62 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-orange-600">
+              38%
+            </span>
           </div>
           <div>
-            <div className="font-medium">23:00 watched</div>
-            <div className="text-sm text-muted-foreground">of 1:00:00 daily limit</div>
+            <div className="font-semibold text-zinc-900">23:00 watched</div>
+            <div className="text-sm text-zinc-500">of 1:00:00 daily limit</div>
+            <div className="text-xs text-orange-600 font-medium mt-1">37 minutes remaining</div>
           </div>
         </div>
-      </div>
-      <div className="h-2 rounded-full bg-muted overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: "38%" }}
-          transition={{ duration: 1, delay: 0.3 }}
-          className="h-full bg-emerald-500 rounded-full"
-        />
+      </motion.div>
+      <div className="flex items-center gap-2 text-sm text-zinc-500">
+        <Clock className="w-4 h-4" />
+        <span>You'll get a gentle reminder at 50 minutes</span>
       </div>
     </div>
   );
@@ -208,22 +275,30 @@ function StatsPreview() {
   const heights = [40, 65, 30, 80, 55, 90, 45];
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between h-24 gap-2">
-        {days.map((day, i) => (
-          <div key={day} className="flex-1 flex flex-col items-center gap-1">
-            <motion.div
-              initial={{ height: 0 }}
-              animate={{ height: `${heights[i]}%` }}
-              transition={{ duration: 0.5, delay: i * 0.05 }}
-              className="w-full bg-gradient-to-t from-chart-4/80 to-chart-4/40 rounded-t-sm"
-            />
-            <span className="text-[10px] text-muted-foreground">{day}</span>
-          </div>
-        ))}
+      <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
+        <div className="flex items-end justify-between h-28 gap-2">
+          {days.map((day, i) => (
+            <div key={day} className="flex-1 flex flex-col items-center gap-1">
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: `${heights[i]}%` }}
+                transition={{ duration: 0.5, delay: i * 0.05, ease: "easeOut" }}
+                className="w-full bg-gradient-to-t from-violet-500 to-violet-400 rounded-t-md"
+              />
+              <span className="text-[10px] text-zinc-500 font-medium">{day}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">This week</span>
-        <span className="font-medium">5h 23m total</span>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm text-zinc-500">This week</div>
+          <div className="font-semibold text-zinc-900">5h 23m total</div>
+        </div>
+        <div className="flex items-center gap-1 text-emerald-600 text-sm font-medium">
+          <span>↓ 18%</span>
+          <span className="text-zinc-400">vs last week</span>
+        </div>
       </div>
     </div>
   );
@@ -239,140 +314,143 @@ const previewComponents: Record<string, React.FC> = {
 };
 
 export function FeatureRunway() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [activeFeature, setActiveFeature] = useState("channels");
   const shouldReduceMotion = useReducedMotion();
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"],
-  });
-
-  // Calculate which feature is active based on scroll
-  const activeIndex = useTransform(
-    scrollYProgress,
-    [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1],
-    [0, 0, 1, 2, 3, 4, 5, 5]
-  );
+  const PreviewComponent = previewComponents[activeFeature];
+  const activeFeatureData = features.find(f => f.id === activeFeature);
 
   return (
-    <section
-      ref={containerRef}
-      id="features"
-      className="relative"
-      style={{ height: `${(features.length + 1) * 100}vh` }}
-    >
-      <div className="sticky top-0 min-h-screen flex items-center py-20 overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/10 to-background pointer-events-none" />
+    <section id="features" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-white to-zinc-50">
+      {/* Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-grid-pattern opacity-40" />
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(220, 38, 38, 0.03) 0%, transparent 60%)",
+            filter: "blur(80px)",
+          }}
+          animate={shouldReduceMotion ? {} : {
+            x: [0, 30, 0],
+            y: [0, -20, 0],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
 
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-7xl mx-auto">
-            {/* Left: Sticky glass preview */}
-            <div className="relative order-2 lg:order-1">
-              <GlassSurface
-                specular={!shouldReduceMotion}
-                refraction
-                className="aspect-[4/3] p-6 md:p-8"
-              >
+      <div className="container mx-auto px-4 relative z-10">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
+          {/* Section header */}
+          <motion.div variants={fadeUp} className="text-center mb-16">
+            <span className="inline-block text-sm font-medium text-red-600 mb-3 tracking-wider uppercase">
+              How it works
+            </span>
+            <h2 className="font-display text-3xl md:text-5xl font-semibold mb-4 text-zinc-900">
+              Simple by design.
+            </h2>
+            <p className="text-zinc-600 text-lg max-w-xl mx-auto">
+              Six steps to reclaim your attention and build better viewing habits.
+            </p>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start max-w-6xl mx-auto">
+            {/* Left: Preview card */}
+            <motion.div variants={fadeUp} className="order-2 lg:order-1">
+              <div className="sticky top-24">
                 <motion.div
-                  key={Math.round(activeIndex.get())}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
-                  className="h-full"
+                  className="p-6 md:p-8 rounded-2xl bg-white border shadow-xl"
+                  animate={{
+                    borderColor: activeFeatureData?.borderColor.replace("border-", "") || "#e4e4e7",
+                    boxShadow: `0 25px 50px -12px ${activeFeatureData?.shadowColor.replace("shadow-", "").replace("/50", "") || "rgba(0,0,0,0.1)"}`,
+                  }}
+                  transition={{ duration: 0.3 }}
                 >
-                  {features.map((feature, i) => {
-                    const PreviewComponent = previewComponents[feature.id];
-                    return (
-                      <motion.div
-                        key={feature.id}
-                        style={{
-                          opacity: useTransform(
-                            activeIndex,
-                            [i - 0.5, i, i + 0.5],
-                            [0, 1, 0]
-                          ),
-                          display: useTransform(activeIndex, (v) =>
-                            Math.abs(v - i) < 1 ? "block" : "none"
-                          ),
-                        }}
-                        className="absolute inset-6 md:inset-8"
-                      >
-                        <PreviewComponent />
-                      </motion.div>
-                    );
-                  })}
+                  {/* Preview header */}
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center",
+                      activeFeatureData?.bgColor
+                    )}>
+                      {activeFeatureData && <activeFeatureData.icon className={cn("w-5 h-5", activeFeatureData.accentColor)} />}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-zinc-900">{activeFeatureData?.title}</div>
+                      <div className="text-xs text-zinc-500">Preview</div>
+                    </div>
+                  </div>
+                  
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeFeature}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3, ease: zenEase }}
+                    >
+                      <PreviewComponent />
+                    </motion.div>
+                  </AnimatePresence>
                 </motion.div>
-              </GlassSurface>
-            </div>
+              </div>
+            </motion.div>
 
             {/* Right: Feature list */}
-            <div className="order-1 lg:order-2 space-y-6">
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-              >
-                <motion.div variants={fadeUp} className="mb-8">
-                  <span className="text-sm font-medium text-accent mb-2 block">
-                    How it works
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                    Simple by design.
-                  </h2>
-                  <p className="text-muted-foreground text-lg">
-                    Six steps to reclaim your attention.
-                  </p>
-                </motion.div>
-              </motion.div>
-
-              <div className="space-y-4">
-                {features.map((feature, i) => (
+            <div className="order-1 lg:order-2 space-y-3">
+              {features.map((feature, i) => {
+                const isActive = activeFeature === feature.id;
+                return (
                   <motion.div
                     key={feature.id}
-                    style={{
-                      opacity: useTransform(
-                        activeIndex,
-                        [i - 1, i - 0.5, i, i + 0.5, i + 1],
-                        [0.4, 0.7, 1, 0.7, 0.4]
-                      ),
-                      scale: useTransform(
-                        activeIndex,
-                        [i - 1, i, i + 1],
-                        [0.98, 1, 0.98]
-                      ),
-                    }}
+                    variants={fadeUp}
+                    onClick={() => setActiveFeature(feature.id)}
+                    className={cn(
+                      "p-4 rounded-xl cursor-pointer transition-all duration-300 border",
+                      isActive
+                        ? `${feature.activeBg} ${feature.borderColor} shadow-md`
+                        : "bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
+                    )}
                   >
-                    <GlassSurface
-                      className="p-4 cursor-pointer transition-colors hover:bg-muted/10"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-xl ${feature.bgColor} flex items-center justify-center flex-shrink-0`}>
-                          <feature.icon className={`w-6 h-6 ${feature.accentColor}`} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-mono text-muted-foreground">
-                              0{i + 1}
-                            </span>
-                            <h3 className="font-semibold">{feature.title}</h3>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {feature.description}
-                          </p>
-                        </div>
+                    <div className="flex items-start gap-4">
+                      <div className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300",
+                        isActive ? feature.bgColor : "bg-zinc-100"
+                      )}>
+                        <feature.icon className={cn(
+                          "w-6 h-6 transition-colors duration-300",
+                          isActive ? feature.accentColor : "text-zinc-400"
+                        )} />
                       </div>
-                    </GlassSurface>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={cn(
+                            "text-xs font-mono transition-colors",
+                            isActive ? feature.accentColor : "text-zinc-400"
+                          )}>
+                            0{i + 1}
+                          </span>
+                          <h3 className="font-semibold text-zinc-900">{feature.title}</h3>
+                          {isActive && (
+                            <ArrowRight className={cn("w-4 h-4 ml-auto", feature.accentColor)} />
+                          )}
+                        </div>
+                        <p className="text-sm text-zinc-600">
+                          {feature.description}
+                        </p>
+                      </div>
+                    </div>
                   </motion.div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
 }
-

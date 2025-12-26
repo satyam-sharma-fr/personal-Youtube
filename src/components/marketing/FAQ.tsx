@@ -43,7 +43,7 @@ export function FAQ() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
+    <section className="relative py-24 md:py-32 overflow-hidden bg-white">
       <div className="container mx-auto px-4">
         <motion.div
           variants={staggerContainer}
@@ -54,11 +54,14 @@ export function FAQ() {
         >
           {/* Header */}
           <motion.div variants={fadeUp} className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
+            <span className="inline-block text-sm font-medium text-teal-600 mb-3 tracking-wider uppercase">
+              FAQ
+            </span>
+            <h2 className="font-display text-3xl md:text-5xl font-semibold mb-4 text-zinc-900">
               Questions?{" "}
-              <span className="text-muted-foreground">Answers.</span>
+              <span className="text-teal-600">Answers.</span>
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-zinc-600 text-lg">
               Everything you need to know about FocusTube.
             </p>
           </motion.div>
@@ -69,19 +72,21 @@ export function FAQ() {
               <motion.div
                 key={faq.question}
                 variants={fadeUp}
-                className="border border-border/50 rounded-2xl overflow-hidden bg-card/30 backdrop-blur-sm"
+                className="border border-zinc-200 rounded-2xl overflow-hidden bg-zinc-50 hover:bg-zinc-100/80 transition-colors"
               >
                 <button
                   onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-muted/30 transition-colors"
+                  className="w-full px-6 py-5 flex items-center justify-between text-left"
                 >
-                  <span className="font-medium pr-4">{faq.question}</span>
+                  <span className="font-medium pr-4 text-zinc-900">{faq.question}</span>
                   <motion.div
                     animate={{ rotate: openIndex === i ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="flex-shrink-0"
                   >
-                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    <ChevronDown className={`w-5 h-5 transition-colors ${
+                      openIndex === i ? "text-red-600" : "text-zinc-400"
+                    }`} />
                   </motion.div>
                 </button>
                 <AnimatePresence>
@@ -96,7 +101,7 @@ export function FAQ() {
                       }}
                     >
                       <div className="px-6 pb-5">
-                        <p className="text-muted-foreground leading-relaxed">
+                        <p className="text-zinc-600 leading-relaxed">
                           {faq.answer}
                         </p>
                       </div>
@@ -111,4 +116,3 @@ export function FAQ() {
     </section>
   );
 }
-

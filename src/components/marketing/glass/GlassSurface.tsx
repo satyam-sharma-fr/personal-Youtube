@@ -21,6 +21,8 @@ interface GlassSurfaceProps extends Omit<HTMLMotionProps<"div">, "ref"> {
   opacity?: number;
   /** Blur intensity */
   blur?: "sm" | "md" | "lg" | "xl";
+  /** Color variant for accents */
+  variant?: "default" | "red" | "teal";
 }
 
 const blurMap = {

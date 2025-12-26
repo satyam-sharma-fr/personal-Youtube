@@ -2,10 +2,10 @@
 
 import { useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { GlassCard } from "./glass/GlassSurface";
 import { useTiltVars } from "@/hooks/usePointerVars";
 import { Target, Ban, Zap } from "lucide-react";
 import { fadeUp, staggerContainer } from "./motion";
+import { cn } from "@/lib/utils";
 
 const principles = [
   {
@@ -13,30 +13,33 @@ const principles = [
     title: "Only channels you pick.",
     description:
       "You decide what shows up. Add channels you love, remove ones you don't. Full control, zero algorithmic interference.",
-    gradient: "from-primary/20 to-primary/5",
-    iconBg: "bg-primary/10",
-    iconColor: "text-primary",
-    borderGlow: "group-hover:shadow-[0_0_30px_-5px_var(--primary)]",
+    gradient: "from-red-50 to-red-100/50",
+    iconBg: "bg-red-100",
+    iconColor: "text-red-600",
+    borderColor: "border-red-200",
+    shadowColor: "shadow-red-100/50",
   },
   {
     icon: Ban,
     title: "No recommendations.",
     description:
       "Zero algorithmic suggestions. No 'you might also like.' No autoplay into oblivion. Just what you asked for.",
-    gradient: "from-accent/20 to-accent/5",
-    iconBg: "bg-accent/10",
-    iconColor: "text-accent",
-    borderGlow: "group-hover:shadow-[0_0_30px_-5px_var(--accent)]",
+    gradient: "from-teal-50 to-teal-100/50",
+    iconBg: "bg-teal-100",
+    iconColor: "text-teal-600",
+    borderColor: "border-teal-200",
+    shadowColor: "shadow-teal-100/50",
   },
   {
     icon: Zap,
-    title: "Fast. Cached. Ready.",
+    title: "Watch with intention.",
     description:
-      "Your feed loads instantly from cache. We pre-fetch channel updates so you spend time watching, not waiting.",
-    gradient: "from-chart-3/20 to-chart-3/5",
-    iconBg: "bg-chart-3/10",
-    iconColor: "text-chart-3",
-    borderGlow: "group-hover:shadow-[0_0_30px_-5px_var(--chart-3)]",
+      "Reclaim your attention. Watch what matters, then close the tab. Built for mindful consumption, not endless scrolling.",
+    gradient: "from-emerald-50 to-emerald-100/50",
+    iconBg: "bg-emerald-100",
+    iconColor: "text-emerald-600",
+    borderColor: "border-emerald-200",
+    shadowColor: "shadow-emerald-100/50",
   },
 ];
 
@@ -66,54 +69,51 @@ function PrismCard({
               transition: "transform 0.1s ease-out",
             }
       }
+      whileHover={shouldReduceMotion ? {} : { y: -6 }}
     >
-      <GlassCard
-        hover={false}
-        className={`relative h-full bg-gradient-to-b ${principle.gradient} transition-shadow duration-500 ${principle.borderGlow}`}
+      <div
+        className={cn(
+          "relative h-full p-6 md:p-8 rounded-2xl bg-white border shadow-lg hover:shadow-xl transition-all duration-300",
+          principle.borderColor,
+          principle.shadowColor
+        )}
       >
-        {/* Specular sweep overlay */}
-        <motion.div
-          className="absolute inset-0 rounded-2xl pointer-events-none overflow-hidden"
-          initial={false}
-        >
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(
-                105deg,
-                transparent 40%,
-                rgba(255, 255, 255, 0.03) 45%,
-                rgba(255, 255, 255, 0.06) 50%,
-                rgba(255, 255, 255, 0.03) 55%,
-                transparent 60%
-              )`,
-              transform: "translateX(var(--px, 0))",
-            }}
-          />
-        </motion.div>
-
-        {/* Icon */}
-        <motion.div
-          className={`w-16 h-16 rounded-2xl ${principle.iconBg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
-          style={shouldReduceMotion ? {} : { transform: "translateZ(20px)" }}
-        >
-          <principle.icon className={`w-8 h-8 ${principle.iconColor}`} />
-        </motion.div>
-
+        {/* Gradient overlay */}
+        <div className={cn("absolute inset-0 rounded-2xl opacity-40 bg-gradient-to-br", principle.gradient)} />
+        
         {/* Content */}
-        <h3 className="text-xl font-bold mb-3">{principle.title}</h3>
-        <p className="text-muted-foreground leading-relaxed">
-          {principle.description}
-        </p>
+        <div className="relative z-10">
+          {/* Icon */}
+          <motion.div
+            className={cn(
+              "w-14 h-14 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300",
+              principle.iconBg
+            )}
+            style={shouldReduceMotion ? {} : { transform: "translateZ(20px)" }}
+          >
+            <principle.icon className={cn("w-7 h-7", principle.iconColor)} />
+          </motion.div>
 
-        {/* Number badge */}
-        <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-background/50 border border-border/50 flex items-center justify-center text-xs font-mono text-muted-foreground">
-          0{index + 1}
+          {/* Title */}
+          <h3 className="font-display text-xl font-semibold mb-3 text-zinc-900">
+            {principle.title}
+          </h3>
+          
+          {/* Description */}
+          <p className="text-zinc-600 leading-relaxed text-[15px]">
+            {principle.description}
+          </p>
         </div>
 
-        {/* Corner accent */}
-        <div className={`absolute bottom-0 right-0 w-24 h-24 ${principle.iconBg} rounded-tl-3xl opacity-50 -z-10`} />
-      </GlassCard>
+        {/* Number badge */}
+        <div className={cn(
+          "absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold",
+          principle.iconBg,
+          principle.iconColor
+        )}>
+          0{index + 1}
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -122,10 +122,34 @@ export function PrinciplesPrismCards() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
+    <section className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-zinc-50 to-white">
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-grid-pattern opacity-50" />
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(220, 38, 38, 0.04) 0%, transparent 60%)",
+            filter: "blur(80px)",
+          }}
+          animate={shouldReduceMotion ? {} : {
+            x: [0, 30, 0],
+            y: [0, -20, 0],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(13, 148, 136, 0.04) 0%, transparent 60%)",
+            filter: "blur(80px)",
+          }}
+          animate={shouldReduceMotion ? {} : {
+            x: [0, -20, 0],
+            y: [0, 30, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -137,17 +161,20 @@ export function PrinciplesPrismCards() {
         >
           {/* Section header */}
           <motion.div variants={fadeUp} className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
+            <span className="inline-block text-sm font-medium text-red-600 mb-3 tracking-wider uppercase">
+              Our Philosophy
+            </span>
+            <h2 className="font-display text-3xl md:text-5xl font-semibold mb-4 text-zinc-900">
               Three principles.{" "}
-              <span className="text-muted-foreground">One mission.</span>
+              <span className="text-teal-600">One mission.</span>
             </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            <p className="text-zinc-600 text-lg max-w-xl mx-auto">
               Built around one idea: you should control what you watch.
             </p>
           </motion.div>
 
           {/* Principles grid */}
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
             {principles.map((principle, i) => (
               <PrismCard key={principle.title} principle={principle} index={i} />
             ))}
@@ -157,4 +184,3 @@ export function PrinciplesPrismCards() {
     </section>
   );
 }
-

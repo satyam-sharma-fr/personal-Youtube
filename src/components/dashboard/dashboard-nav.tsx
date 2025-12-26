@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Play, Menu, Settings, LogOut, User as UserIcon, CreditCard, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Play, Menu, Settings, LogOut, User as UserIcon, CreditCard, PanelLeftClose, PanelLeft, Crown } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
@@ -58,18 +58,18 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
     : user.email?.slice(0, 2).toUpperCase() || "U";
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+    <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-zinc-200 bg-white/80 backdrop-blur-xl">
       <div className="h-full px-4 flex items-center justify-between">
         {/* Left: Menu + Logo */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button variant="ghost" size="icon" className="md:hidden text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
+            <SheetContent side="left" className="w-64 p-0 bg-white">
               <DashboardSidebarContent channels={channels} categories={categories} />
             </SheetContent>
           </Sheet>
@@ -81,7 +81,7 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="hidden md:flex"
+                  className="hidden md:flex text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
                   onClick={toggleSidebar}
                 >
                   {isCollapsed ? (
@@ -91,18 +91,20 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">
+              <TooltipContent side="bottom" className="bg-zinc-900 text-white">
                 {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
 
           {/* Logo */}
-          <Link href={homeHref} className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Play className="w-4 h-4 text-primary fill-primary" />
+          <Link href={homeHref} className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md shadow-red-500/20">
+              <Play className="w-4 h-4 text-white fill-white ml-0.5" />
             </div>
-            <span className="font-bold text-lg hidden sm:inline">FocusTube</span>
+            <span className="font-display font-semibold text-lg text-zinc-900 hidden sm:inline tracking-tight">
+              FocusTube
+            </span>
           </Link>
         </div>
 
@@ -112,9 +114,12 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
           <NavTimer />
 
           {profile?.subscription_tier === "free" && (
-            <Link href="/settings">
-              <Button variant="outline" size="sm" className="hidden sm:flex">
-                <CreditCard className="w-4 h-4 mr-2" />
+            <Link href="/dashboard/settings">
+              <Button 
+                size="sm" 
+                className="hidden sm:flex bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md shadow-red-500/20"
+              >
+                <Crown className="w-4 h-4 mr-1.5" />
                 Upgrade
               </Button>
             </Link>
@@ -122,47 +127,50 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                <Avatar className="h-9 w-9">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-zinc-100">
+                <Avatar className="h-9 w-9 border-2 border-zinc-200">
                   <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "User"} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
+                  <AvatarFallback className="bg-gradient-to-br from-red-100 to-red-200 text-red-600 font-semibold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent className="w-56 bg-white border-zinc-200" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
+                  <p className="text-sm font-semibold leading-none text-zinc-900">
                     {profile?.full_name || "User"}
                   </p>
-                  <p className="text-xs leading-none text-muted-foreground">
+                  <p className="text-xs leading-none text-zinc-500">
                     {user.email}
                   </p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/settings" className="cursor-pointer">
+              <DropdownMenuSeparator className="bg-zinc-200" />
+              <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 cursor-pointer">
+                <Link href="/dashboard/settings">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings" className="cursor-pointer">
+              <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 cursor-pointer">
+                <Link href="/dashboard/settings">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings" className="cursor-pointer">
+              <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 cursor-pointer">
+                <Link href="/dashboard/settings">
                   <CreditCard className="mr-2 h-4 w-4" />
                   Billing
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+              <DropdownMenuSeparator className="bg-zinc-200" />
+              <DropdownMenuItem 
+                onClick={handleSignOut} 
+                className="text-red-600 hover:bg-red-50 focus:bg-red-50 cursor-pointer"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </DropdownMenuItem>

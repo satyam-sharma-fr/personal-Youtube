@@ -1,130 +1,373 @@
 "use client";
 
-import { useRef } from "react";
-import Link from "next/link";
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { GlassPortal, GlassSurface } from "./glass/GlassSurface";
-import { usePointerVars } from "@/hooks/usePointerVars";
 import {
   Play,
-  Tv,
-  Grid3X3,
+  Plus,
+  Search,
   Clock,
-  BarChart3,
+  Tv,
+  Check,
   ArrowRight,
-  Sparkles,
-  Eye,
+  ChevronRight,
+  RotateCcw,
+  Home,
+  Filter,
+  X,
 } from "lucide-react";
-import { fadeUp, staggerContainer } from "./motion";
+import { fadeUp, staggerContainer, zenEase } from "./motion";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
-const demoFeatures = [
-  {
-    icon: Tv,
-    title: "Curated channels",
-    description: "Real YouTube channels, beautifully organized",
+// Real YouTube channels with actual data
+const demoChannels = [
+  { 
+    id: "1", 
+    name: "MKBHD", 
+    category: "Tech", 
+    avatar: "https://yt3.googleusercontent.com/lkH37D712tiyphLsBkT8CRLSLCLMOeSLKyxdY6mfSdWB7sJBxwfnYc_VNQBqQ6-2TkM3Nj5Hpg=s176-c-k-c0x00ffffff-no-rj",
+    subscribers: "18.9M",
   },
-  {
-    icon: Grid3X3,
-    title: "Categories & filters",
-    description: "See how channel organization works",
+  { 
+    id: "2", 
+    name: "3Blue1Brown", 
+    category: "Education", 
+    avatar: "https://yt3.googleusercontent.com/ytc/AIdro_nFzgcTrxulXeYVmDXRAblMhvQ-MjI1aTXU3kqwQS5a=s176-c-k-c0x00ffffff-no-rj",
+    subscribers: "6.2M",
   },
-  {
-    icon: Play,
-    title: "Clean watch experience",
-    description: "Distraction-free video player",
+  { 
+    id: "3", 
+    name: "Veritasium", 
+    category: "Science", 
+    avatar: "https://yt3.googleusercontent.com/ytc/AIdro_kED97yk3MKP6Abzc5u9pnNBWH8pKzYh-36EJNWBLpvhg=s176-c-k-c0x00ffffff-no-rj",
+    subscribers: "15.4M",
   },
-  {
-    icon: Clock,
-    title: "Watch time tracking",
-    description: "Daily limits and progress stats",
+  { 
+    id: "4", 
+    name: "Fireship", 
+    category: "Tech", 
+    avatar: "https://yt3.googleusercontent.com/ytc/AIdro_k_D9hKDXhJDNf1tSNJoXMTT8-OVx3jHfsmFnQOBA=s176-c-k-c0x00ffffff-no-rj",
+    subscribers: "3.1M",
   },
 ];
 
-// Mock preview elements for the portal window
-function MockDashboardPreview() {
+// Sample videos matching the channels
+const demoVideos = [
+  {
+    id: "1",
+    channelId: "1",
+    title: "The BEST Smartphones of 2024!",
+    channel: "MKBHD",
+    channelAvatar: demoChannels[0].avatar,
+    duration: "18:45",
+    thumbnail: "https://i.ytimg.com/vi/XuSz4YQYGEQ/maxresdefault.jpg",
+    views: "4.2M",
+    time: "2 days ago",
+  },
+  {
+    id: "2",
+    channelId: "2",
+    title: "But what is a neural network?",
+    channel: "3Blue1Brown",
+    channelAvatar: demoChannels[1].avatar,
+    duration: "19:13",
+    thumbnail: "https://i.ytimg.com/vi/aircAruvnKk/maxresdefault.jpg",
+    views: "18M",
+    time: "2 years ago",
+  },
+  {
+    id: "3",
+    channelId: "3",
+    title: "The Bizarre Behavior of Rotating Bodies",
+    channel: "Veritasium",
+    channelAvatar: demoChannels[2].avatar,
+    duration: "15:42",
+    thumbnail: "https://i.ytimg.com/vi/OcE7_nLX5W0/maxresdefault.jpg",
+    views: "12M",
+    time: "1 month ago",
+  },
+  {
+    id: "4",
+    channelId: "4",
+    title: "100 Seconds of Code - React",
+    channel: "Fireship",
+    channelAvatar: demoChannels[3].avatar,
+    duration: "2:27",
+    thumbnail: "https://i.ytimg.com/vi/Tn6-PIqc4UM/maxresdefault.jpg",
+    views: "2.1M",
+    time: "1 year ago",
+  },
+  {
+    id: "5",
+    channelId: "1",
+    title: "Galaxy S24 Ultra Review: 100X Better!",
+    channel: "MKBHD",
+    channelAvatar: demoChannels[0].avatar,
+    duration: "14:22",
+    thumbnail: "https://i.ytimg.com/vi/6xDAFWALQiY/maxresdefault.jpg",
+    views: "5.1M",
+    time: "1 week ago",
+  },
+  {
+    id: "6",
+    channelId: "2",
+    title: "Visualizing quaternions",
+    channel: "3Blue1Brown",
+    channelAvatar: demoChannels[1].avatar,
+    duration: "31:51",
+    thumbnail: "https://i.ytimg.com/vi/d4EgbgTm0Bg/maxresdefault.jpg",
+    views: "8.2M",
+    time: "4 years ago",
+  },
+];
+
+// Mini dashboard component that mimics the real app
+function MiniDashboard({ 
+  addedChannels, 
+  onRemoveChannel 
+}: { 
+  addedChannels: string[];
+  onRemoveChannel: (id: string) => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"feed" | "channels">("feed");
+  const shouldReduceMotion = useReducedMotion();
+
+  const filteredVideos = demoVideos.filter(video => 
+    addedChannels.includes(video.channelId)
+  );
+
+  const addedChannelData = demoChannels.filter(ch => 
+    addedChannels.includes(ch.id)
+  );
+
   return (
-    <div className="relative w-full h-full bg-background/50 rounded-xl overflow-hidden">
-      {/* Mock header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border/30">
-        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Play className="w-4 h-4 text-primary fill-primary" />
+    <div className="h-full flex flex-col bg-white rounded-2xl overflow-hidden border border-zinc-200 shadow-xl">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50/50">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+            <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+          </div>
+          <span className="font-semibold text-zinc-900 text-sm">FocusTube</span>
         </div>
-        <div className="flex-1">
-          <div className="h-3 w-24 bg-muted rounded" />
-        </div>
-        <div className="flex gap-2">
-          <div className="h-8 w-8 rounded-full bg-muted/50" />
-          <div className="h-8 w-20 rounded-lg bg-accent/20" />
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 border border-teal-100">
+          <Clock className="w-3 h-3 text-teal-600" />
+          <span className="text-[10px] font-medium text-teal-600">0:00</span>
         </div>
       </div>
 
-      {/* Mock video grid */}
-      <div className="p-4 grid grid-cols-2 gap-3">
-        {[1, 2, 3, 4].map((i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * i, duration: 0.4 }}
-            className="space-y-2"
-          >
-            <div className="aspect-video rounded-lg bg-gradient-to-br from-muted/80 to-muted/40 flex items-center justify-center group cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Play className="w-4 h-4 text-foreground fill-foreground ml-0.5" />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="w-6 h-6 rounded-full bg-muted/60" />
-              <div className="flex-1 space-y-1">
-                <div className="h-2.5 w-full bg-muted/60 rounded" />
-                <div className="h-2 w-2/3 bg-muted/40 rounded" />
-              </div>
-            </div>
-          </motion.div>
-        ))}
+      {/* Navigation tabs */}
+      <div className="flex border-b border-zinc-100">
+        <button
+          onClick={() => setActiveTab("feed")}
+          className={cn(
+            "flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5",
+            activeTab === "feed" 
+              ? "text-red-600 border-b-2 border-red-600 bg-red-50/50" 
+              : "text-zinc-500 hover:text-zinc-700"
+          )}
+        >
+          <Home className="w-3.5 h-3.5" />
+          Feed
+        </button>
+        <button
+          onClick={() => setActiveTab("channels")}
+          className={cn(
+            "flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5",
+            activeTab === "channels" 
+              ? "text-red-600 border-b-2 border-red-600 bg-red-50/50" 
+              : "text-zinc-500 hover:text-zinc-700"
+          )}
+        >
+          <Tv className="w-3.5 h-3.5" />
+          Channels ({addedChannels.length})
+        </button>
       </div>
 
-      {/* Floating watch time indicator */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.6, type: "spring" }}
-        className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30"
-      >
-        <div className="w-4 h-4 rounded-full border-2 border-emerald-500 flex items-center justify-center">
-          <Clock className="w-2 h-2 text-emerald-500" />
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto">
+        <AnimatePresence mode="wait">
+          {activeTab === "feed" ? (
+            <motion.div
+              key="feed"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ duration: 0.2 }}
+              className="p-3"
+            >
+              {filteredVideos.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Filter indicator */}
+                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                    <Filter className="w-3 h-3" />
+                    <span>Showing videos from {addedChannels.length} channel{addedChannels.length !== 1 ? "s" : ""}</span>
+                  </div>
+                  
+                  {/* Video list */}
+                  {filteredVideos.map((video, i) => (
+                    <motion.div
+                      key={video.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
+                      className="flex gap-2.5 p-2 rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group"
+                    >
+                      {/* Thumbnail */}
+                      <div className="relative w-28 aspect-video rounded-lg overflow-hidden bg-zinc-100 flex-shrink-0">
+                        <img 
+                          src={video.thumbnail} 
+                          alt={video.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 text-white text-[9px] rounded font-medium">
+                          {video.duration}
+                        </span>
+                      </div>
+                      
+                      {/* Info */}
+                      <div className="flex-1 min-w-0 py-0.5">
+                        <h4 className="text-[11px] font-medium text-zinc-900 line-clamp-2 leading-tight mb-1 group-hover:text-red-600 transition-colors">
+                          {video.title}
+                        </h4>
+                        <div className="flex items-center gap-1.5">
+                          <img 
+                            src={video.channelAvatar} 
+                            alt={video.channel}
+                            className="w-4 h-4 rounded-full"
+                          />
+                          <span className="text-[10px] text-zinc-500 truncate">{video.channel}</span>
+                        </div>
+                        <p className="text-[9px] text-zinc-400 mt-0.5">
+                          {video.views} • {video.time}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 text-center">
+                  <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-3">
+                    <Tv className="w-6 h-6 text-zinc-400" />
+                  </div>
+                  <p className="text-sm text-zinc-500">No channels added yet</p>
+                  <p className="text-xs text-zinc-400 mt-1">Add channels to see your feed</p>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="channels"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+              className="p-3"
+            >
+              {addedChannelData.length > 0 ? (
+                <div className="space-y-2">
+                  {addedChannelData.map((channel, i) => (
+                    <motion.div
+                      key={channel.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-teal-50/50 border border-teal-100"
+                    >
+                      <img 
+                        src={channel.avatar} 
+                        alt={channel.name}
+                        className="w-9 h-9 rounded-full"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-zinc-900">{channel.name}</div>
+                        <div className="text-[10px] text-zinc-500">{channel.subscribers} subscribers</div>
+                      </div>
+                      <button
+                        onClick={() => onRemoveChannel(channel.id)}
+                        className="w-6 h-6 rounded-full bg-zinc-100 hover:bg-red-100 flex items-center justify-center transition-colors group"
+                      >
+                        <X className="w-3 h-3 text-zinc-400 group-hover:text-red-500" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 text-center">
+                  <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-3">
+                    <Plus className="w-6 h-6 text-zinc-400" />
+                  </div>
+                  <p className="text-sm text-zinc-500">No channels yet</p>
+                  <p className="text-xs text-zinc-400 mt-1">Add your favorite channels</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom status */}
+      {addedChannels.length > 0 && (
+        <div className="px-4 py-2.5 border-t border-zinc-100 bg-zinc-50/50">
+          <div className="flex items-center justify-center gap-2 text-[10px] text-teal-600">
+            <Check className="w-3 h-3" />
+            <span className="font-medium">No recommendations • No distractions</span>
+          </div>
         </div>
-        <span className="text-xs font-medium text-emerald-400">23:45 / 1:00:00</span>
-      </motion.div>
+      )}
     </div>
   );
 }
 
 export function DemoPortal() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const portalRef = useRef<HTMLDivElement>(null);
+  const [addedChannels, setAddedChannels] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const shouldReduceMotion = useReducedMotion();
 
-  usePointerVars(portalRef, { enabled: !shouldReduceMotion });
+  const handleAddChannel = useCallback((id: string) => {
+    setAddedChannels((prev) =>
+      prev.includes(id) ? prev : [...prev, id]
+    );
+  }, []);
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"],
-  });
+  const handleRemoveChannel = useCallback((id: string) => {
+    setAddedChannels((prev) => prev.filter((c) => c !== id));
+  }, []);
 
-  const y = useTransform(scrollYProgress, [0, 1], [60, -60]);
-  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 1, 0.95]);
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.5, 1, 1, 0.5]);
+  const filteredChannels = demoChannels.filter(channel =>
+    channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    channel.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <section
-      ref={containerRef}
-      className="relative py-24 md:py-32 overflow-hidden"
-    >
-      {/* Background gradient */}
+    <section className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-white to-zinc-50">
+      {/* Background effects */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-accent/10 via-primary/5 to-accent/10 rounded-full blur-3xl opacity-60" />
+        <div className="absolute inset-0 bg-grid-pattern opacity-40" />
+        <motion.div
+          className="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(220, 38, 38, 0.05) 0%, transparent 60%)",
+            filter: "blur(80px)",
+          }}
+          animate={shouldReduceMotion ? {} : {
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(13, 148, 136, 0.05) 0%, transparent 60%)",
+            filter: "blur(80px)",
+          }}
+          animate={shouldReduceMotion ? {} : {
+            scale: [1, 1.15, 1],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -135,146 +378,134 @@ export function DemoPortal() {
           viewport={{ once: true, margin: "-100px" }}
           className="max-w-6xl mx-auto"
         >
-          {/* Section badge */}
-          <motion.div variants={fadeUp} className="flex justify-center mb-6">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-medium">
-              <Eye className="w-4 h-4" />
-              See it in action
+          {/* Section header */}
+          <motion.div variants={fadeUp} className="text-center mb-12">
+            <span className="inline-block text-sm font-medium text-red-600 mb-3 tracking-wider uppercase">
+              Interactive Demo
             </span>
-          </motion.div>
-
-          {/* Headline */}
-          <motion.div variants={fadeUp} className="text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-bold mb-6">
-              Try the{" "}
-              <span className="text-gradient">live demo</span>
+            <h2 className="font-display text-3xl md:text-5xl font-semibold mb-4 text-zinc-900">
+              Try it yourself.
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Experience the real dashboard with curated channels. No signup needed.
-              Just explore.
+            <p className="text-zinc-600 text-lg max-w-xl mx-auto">
+              Add channels on the left, see your curated feed on the right. No sign-up required.
             </p>
           </motion.div>
 
-          {/* Main portal area */}
-          <motion.div
-            variants={fadeUp}
-            style={shouldReduceMotion ? {} : { y, scale, opacity }}
-            className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center"
-          >
-            {/* Portal preview */}
-            <div ref={portalRef} className="relative order-2 lg:order-1">
-              <GlassPortal
-                glowing={!shouldReduceMotion}
-                className="aspect-[4/3] p-2 md:p-3"
-              >
-                <MockDashboardPreview />
-              </GlassPortal>
+          <motion.div variants={fadeUp}>
+            <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
+              {/* Left: Channel picker */}
+              <div className="bg-white rounded-2xl border border-zinc-200 shadow-lg overflow-hidden">
+                <div className="p-4 border-b border-zinc-100 bg-zinc-50/50">
+                  <h3 className="font-semibold text-zinc-900 flex items-center gap-2 mb-3">
+                    <Plus className="w-5 h-5 text-red-600" />
+                    Add Channels
+                  </h3>
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search channels..."
+                      className="w-full h-10 pl-10 pr-4 rounded-xl bg-white border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all"
+                    />
+                  </div>
+                </div>
 
-              {/* Decorative floating elements */}
-              {!shouldReduceMotion && (
-                <>
-                  <motion.div
-                    className="absolute -top-6 -right-6 w-16 h-16"
-                    animate={{
-                      y: [0, -10, 0],
-                      rotate: [0, 5, 0],
-                    }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    <GlassSurface className="w-full h-full flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-accent" />
-                    </GlassSurface>
-                  </motion.div>
-
-                  <motion.div
-                    className="absolute -bottom-4 -left-4 w-12 h-12"
-                    animate={{
-                      y: [0, 8, 0],
-                      rotate: [0, -5, 0],
-                    }}
-                    transition={{
-                      duration: 3.5,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                      delay: 0.5,
-                    }}
-                  >
-                    <GlassSurface className="w-full h-full flex items-center justify-center">
-                      <BarChart3 className="w-5 h-5 text-primary" />
-                    </GlassSurface>
-                  </motion.div>
-                </>
-              )}
-            </div>
-
-            {/* Features and CTA */}
-            <div className="order-1 lg:order-2 space-y-8">
-              {/* Feature list */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                {demoFeatures.map((feature, i) => (
-                  <motion.div
-                    key={feature.title}
-                    variants={fadeUp}
-                    custom={i}
-                    className="group"
-                  >
-                    <GlassSurface
-                      specular={!shouldReduceMotion}
-                      className="p-4 h-full"
-                      whileHover={
-                        shouldReduceMotion
-                          ? undefined
-                          : { scale: 1.02, y: -2 }
-                      }
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
-                          <feature.icon className="w-5 h-5 text-accent" />
+                <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
+                  {filteredChannels.map((channel, i) => {
+                    const isAdded = addedChannels.includes(channel.id);
+                    return (
+                      <motion.div
+                        key={channel.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                          isAdded
+                            ? "bg-teal-50 border-2 border-teal-300 shadow-sm"
+                            : "bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
+                        )}
+                        onClick={() => isAdded ? handleRemoveChannel(channel.id) : handleAddChannel(channel.id)}
+                      >
+                        <img 
+                          src={channel.avatar} 
+                          alt={channel.name}
+                          className="w-11 h-11 rounded-full"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-zinc-900">{channel.name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-zinc-500">{channel.subscribers}</span>
+                            <span className="text-zinc-300">•</span>
+                            <span className="text-xs text-zinc-400">{channel.category}</span>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold mb-1">{feature.title}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {feature.description}
-                          </p>
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                          isAdded 
+                            ? "bg-teal-500 text-white" 
+                            : "bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-500"
+                        )}>
+                          {isAdded ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Plus className="w-4 h-4" />
+                          )}
                         </div>
-                      </div>
-                    </GlassSurface>
-                  </motion.div>
-                ))}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* Status bar */}
+                <div className="p-4 border-t border-zinc-100 bg-zinc-50/50">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">
+                      {addedChannels.length} channel{addedChannels.length !== 1 ? "s" : ""} selected
+                    </span>
+                    {addedChannels.length > 0 && (
+                      <button
+                        onClick={() => setAddedChannels([])}
+                        className="text-zinc-400 hover:text-red-500 flex items-center gap-1 text-xs transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* CTA */}
-              <motion.div variants={fadeUp} className="space-y-4">
-                <Link href="/demo" className="block">
-                  <Button
-                    size="lg"
-                    className="w-full h-14 text-lg group relative overflow-hidden"
-                  >
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      <Play className="w-5 h-5 fill-current" />
-                      Enter Live Demo
-                      <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-                    </span>
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    />
-                  </Button>
-                </Link>
-
-                <p className="text-center text-sm text-muted-foreground">
-                  Browse-only mode • Real channels • No account required
-                </p>
-              </motion.div>
+              {/* Right: Mini dashboard preview */}
+              <div className="h-[520px]">
+                <MiniDashboard 
+                  addedChannels={addedChannels} 
+                  onRemoveChannel={handleRemoveChannel}
+                />
+              </div>
             </div>
+          </motion.div>
+
+          {/* CTA */}
+          <motion.div variants={fadeUp} className="text-center mt-12">
+            <p className="text-sm text-zinc-500 mb-4">
+              Like what you see? Create your account to save your channels.
+            </p>
+            <Link href="/signup">
+              <Button
+                size="lg"
+                className="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20 rounded-xl"
+              >
+                Start for Free
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
           </motion.div>
         </motion.div>
       </div>
     </section>
   );
 }
-
