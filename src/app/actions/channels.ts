@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { searchChannels as searchYouTubeChannels } from "@/lib/youtube";
+import { searchChannels as searchYouTubeChannels, getChannelVideos } from "@/lib/youtube";
 import { addChannelForUser } from "@/lib/channels/add-channel";
 
 export async function addChannel(input: string, categoryIds?: string[]) {
