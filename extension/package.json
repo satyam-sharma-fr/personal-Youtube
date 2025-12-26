@@ -1,0 +1,18 @@
+{
+  "name": "focustube-extension",
+  "version": "1.0.0",
+  "description": "FocusTube Chrome Extension - Add YouTube channels with one click",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:ts && npm run copy:assets",
+    "build:ts": "tsc",
+    "copy:assets": "node scripts/copy-assets.js",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.0.0"
+  }
+}
+

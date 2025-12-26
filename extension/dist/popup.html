@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusTube</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span class="logo-text">FocusTube</span>
+      </div>
+    </header>
+
+    <!-- Loading State -->
+    <div id="loading-view" class="view">
+      <div class="loading-spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <!-- Login View -->
+    <div id="login-view" class="view hidden">
+      <p class="welcome-text">Sign in to add YouTube channels to your FocusTube dashboard</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        <div id="login-error" class="error-message hidden"></div>
+        <button type="submit" class="btn btn-primary" id="login-btn">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-loading hidden">
+            <span class="loading-spinner small"></span>
+          </span>
+        </button>
+      </form>
+      <p class="signup-hint">
+        Don't have an account? 
+        <a href="#" id="signup-link">Sign up on FocusTube</a>
+      </p>
+    </div>
+
+    <!-- Logged In View -->
+    <div id="logged-in-view" class="view hidden">
+      <div class="user-info">
+        <div class="user-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="user-details">
+          <p class="user-email" id="user-email">user@example.com</p>
+          <p class="user-status">Signed in</p>
+        </div>
+      </div>
+
+      <!-- Current Channel Section (shown when on YouTube) -->
+      <div id="channel-section" class="channel-section hidden">
+        <div class="channel-info">
+          <div class="channel-name" id="channel-name">Channel Name</div>
+          <div class="channel-url" id="channel-url">@handle</div>
+        </div>
+        
+        <!-- Category Selection -->
+        <div class="category-section">
+          <label class="category-label">Add to categories (optional)</label>
+          <div id="categories-list" class="categories-list">
+            <div class="loading-categories">Loading categories...</div>
+          </div>
+        </div>
+
+        <button id="add-channel-btn" class="btn btn-primary btn-add">
+          <span class="btn-text">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add to FocusTube
+          </span>
+          <span class="btn-loading hidden">
+            <span class="loading-spinner small"></span>
+          </span>
+        </button>
+        <div id="add-result" class="add-result hidden"></div>
+      </div>
+
+      <!-- No Channel Message -->
+      <div id="no-channel-section" class="no-channel-section">
+        <div class="info-box">
+          <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <p>Navigate to a YouTube channel or video page, then click this icon to add the channel.</p>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <a href="#" id="open-dashboard-link" class="link">Open Dashboard</a>
+        <button id="logout-btn" class="btn btn-secondary btn-small">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

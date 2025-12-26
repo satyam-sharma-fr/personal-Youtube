@@ -1,0 +1,306 @@
+/* FocusTube Extension - Content Script Styles */
+
+#focustube-add-button {
+  --ft-accent: #ff4444;
+  --ft-accent-hover: #ff5555;
+  --ft-success: #22c55e;
+  --ft-bg: #1a1a1a;
+  --ft-bg-secondary: #252525;
+  --ft-text: #ffffff;
+  --ft-text-secondary: #aaaaaa;
+  --ft-text-muted: #717171;
+  --ft-border: #333333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  z-index: 9999;
+  position: relative;
+}
+
+/* Inline positioning */
+#focustube-add-button.focustube-inline {
+  display: inline-flex;
+  flex-direction: column;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Fixed positioning */
+#focustube-add-button.focustube-fixed {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+}
+
+/* Button wrapper */
+.focustube-wrapper {
+  display: flex;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+}
+
+/* Main button */
+.focustube-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--ft-accent);
+  color: var(--ft-text);
+  border: none;
+  border-radius: 20px 0 0 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.focustube-btn:hover {
+  background: var(--ft-accent-hover);
+}
+
+/* Dropdown button */
+.focustube-dropdown-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  background: var(--ft-accent);
+  color: var(--ft-text);
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0 20px 20px 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.focustube-dropdown-btn:hover {
+  background: var(--ft-accent-hover);
+}
+
+.focustube-dropdown-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Icon */
+.focustube-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Loading state */
+.focustube-loading {
+  display: none;
+}
+
+.focustube-btn-loading .focustube-text,
+.focustube-btn-loading .focustube-icon {
+  display: none;
+}
+
+.focustube-btn-loading .focustube-loading {
+  display: flex;
+}
+
+.focustube-btn-loading {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Spinner */
+.focustube-spinner {
+  width: 16px;
+  height: 16px;
+  animation: focustube-spin 1s linear infinite;
+}
+
+@keyframes focustube-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Success state */
+.focustube-btn-success {
+  background: var(--ft-success) !important;
+}
+
+/* Dropdown */
+.focustube-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--ft-bg);
+  border: 1px solid var(--ft-border);
+  border-radius: 8px;
+  min-width: 200px;
+  max-width: 280px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 10001;
+}
+
+.focustube-dropdown.hidden {
+  display: none;
+}
+
+.focustube-dropdown-header {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ft-text-secondary);
+  border-bottom: 1px solid var(--ft-border);
+}
+
+.focustube-categories {
+  padding: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.focustube-loading-cats,
+.focustube-no-cats {
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ft-text-muted);
+}
+
+.focustube-cat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.focustube-cat-item:hover {
+  background: var(--ft-bg-secondary);
+}
+
+.focustube-cat-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ft-accent);
+  cursor: pointer;
+}
+
+.focustube-cat-name {
+  font-size: 13px;
+  color: var(--ft-text);
+}
+
+/* Toast notifications */
+.focustube-toast {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  padding: 12px 20px;
+  background: var(--ft-bg);
+  color: var(--ft-text);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 10002;
+  max-width: 300px;
+}
+
+.focustube-toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.focustube-toast-success {
+  border-left: 3px solid var(--ft-success);
+}
+
+.focustube-toast-error {
+  border-left: 3px solid #ef4444;
+}
+
+.focustube-toast-info {
+  border-left: 3px solid #3b82f6;
+}
+
+/* Light mode adjustments */
+html:not([dark]) .focustube-toast {
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+html:not([dark]) .focustube-dropdown {
+  background: #ffffff;
+  border-color: #e5e5e5;
+}
+
+html:not([dark]) .focustube-dropdown-header {
+  border-color: #e5e5e5;
+  color: #666666;
+}
+
+html:not([dark]) .focustube-cat-item:hover {
+  background: #f5f5f5;
+}
+
+html:not([dark]) .focustube-cat-name {
+  color: #1a1a1a;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #focustube-add-button.focustube-fixed {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .focustube-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .focustube-toast {
+    bottom: 70px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+}
+
+/* Scrollbar */
+.focustube-categories::-webkit-scrollbar {
+  width: 4px;
+}
+
+.focustube-categories::-webkit-scrollbar-track {
+  background: var(--ft-bg-secondary);
+  border-radius: 2px;
+}
+
+.focustube-categories::-webkit-scrollbar-thumb {
+  background: var(--ft-border);
+  border-radius: 2px;
+}
+
+/* Animation */
+@keyframes focustube-fadein {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+#focustube-add-button {
+  animation: focustube-fadein 0.3s ease;
+}

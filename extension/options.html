@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusTube Extension Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <header class="options-header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span class="logo-text">FocusTube</span>
+      </div>
+      <h1>Extension Settings</h1>
+    </header>
+
+    <main class="options-content">
+      <form id="options-form">
+        <section class="section">
+          <h2>App Configuration</h2>
+          <p class="section-description">Configure the URL of your FocusTube app.</p>
+          
+          <div class="form-group">
+            <label for="app-url">App URL</label>
+            <input 
+              type="url" 
+              id="app-url" 
+              placeholder="http://localhost:3000" 
+              value="http://localhost:3000"
+            >
+            <p class="hint">The URL where your FocusTube app is running (e.g., http://localhost:3000 for development)</p>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Supabase Configuration</h2>
+          <p class="section-description">
+            These settings must match your FocusTube app's Supabase configuration. 
+            You can find these values in your <code>.env.local</code> file or Supabase dashboard.
+          </p>
+          
+          <div class="form-group">
+            <label for="supabase-url">Supabase URL</label>
+            <input 
+              type="url" 
+              id="supabase-url" 
+              placeholder="https://your-project.supabase.co"
+              required
+            >
+            <p class="hint">Your Supabase project URL (NEXT_PUBLIC_SUPABASE_URL)</p>
+          </div>
+
+          <div class="form-group">
+            <label for="supabase-anon-key">Supabase Anon Key</label>
+            <input 
+              type="text" 
+              id="supabase-anon-key" 
+              placeholder="eyJhbGciOiJIUzI1NiIsInR..."
+              required
+            >
+            <p class="hint">Your Supabase anonymous key (NEXT_PUBLIC_SUPABASE_ANON_KEY)</p>
+          </div>
+        </section>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="save-btn">
+            <span class="btn-text">Save Settings</span>
+            <span class="btn-loading hidden">
+              <span class="loading-spinner small"></span>
+            </span>
+          </button>
+          <div id="save-status" class="save-status hidden"></div>
+        </div>
+      </form>
+
+      <section class="section info-section">
+        <h2>How to Find Your Supabase Credentials</h2>
+        <ol class="steps">
+          <li>Open your FocusTube project's <code>.env.local</code> file</li>
+          <li>Copy the value of <code>NEXT_PUBLIC_SUPABASE_URL</code></li>
+          <li>Copy the value of <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+          <li>Paste them in the fields above</li>
+        </ol>
+        <p class="note">
+          <strong>Note:</strong> These are the same credentials your web app uses. 
+          The anon key is safe to use in the extension as it only allows authenticated operations.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
+
