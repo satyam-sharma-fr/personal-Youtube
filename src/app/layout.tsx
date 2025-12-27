@@ -26,6 +26,10 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "FocusTube - Watch with Intention",
   description: "Reclaim your attention. Watch only the channels you choose. No algorithm, no distractions.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.svg",
+  },
 };
 
 export default function RootLayout({
