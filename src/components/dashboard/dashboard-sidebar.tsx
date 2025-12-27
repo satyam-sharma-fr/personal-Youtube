@@ -20,6 +20,7 @@ import {
   FolderOpen,
   Plus,
   LayoutGrid,
+  Inbox,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -138,31 +139,47 @@ export function DashboardSidebarContent({ channels = [], categories = [] }: Dash
         </nav>
 
         {/* Categories */}
-        {categories.length > 0 && (
-          <nav className="mt-6 space-y-1">
-            <p className="px-3 py-2 text-xs font-medium text-zinc-400 uppercase tracking-wider">
-              Categories
-            </p>
-            {categories.slice(0, 5).map((category) => {
-              const isActive = pathname.includes(`category=${category.id}`);
-              return (
-                <Link
-                  key={category.id}
-                  href={`/dashboard?category=${category.id}`}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                    isActive
-                      ? "bg-teal-50 text-teal-600 shadow-sm"
-                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-                  )}
-                >
-                  <FolderOpen className={cn("w-5 h-5", isActive && "text-teal-600")} />
-                  <span className="truncate">{category.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        )}
+        <nav className="mt-6 space-y-1">
+          <p className="px-3 py-2 text-xs font-medium text-zinc-400 uppercase tracking-wider">
+            Categories
+          </p>
+          {categories.slice(0, 5).map((category) => {
+            const isActive = pathname.includes(`category=${category.id}`);
+            return (
+              <Link
+                key={category.id}
+                href={`/dashboard?category=${category.id}`}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                  isActive
+                    ? "bg-teal-50 text-teal-600 shadow-sm"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                )}
+              >
+                <FolderOpen className={cn("w-5 h-5", isActive && "text-teal-600")} />
+                <span className="truncate">{category.name}</span>
+              </Link>
+            );
+          })}
+          {/* Uncategorized */}
+          {(() => {
+            const isActive = pathname.includes("category=uncategorized");
+            return (
+              <Link
+                href="/dashboard?category=uncategorized"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                  isActive
+                    ? "bg-zinc-200 text-zinc-800 shadow-sm"
+                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+                )}
+              >
+                <Inbox className={cn("w-5 h-5", isActive && "text-zinc-600")} />
+                <span className="truncate">Uncategorized</span>
+              </Link>
+            );
+          })()}
+        </nav>
 
         {/* Upgrade Card */}
         {tier === "free" && (
@@ -278,7 +295,7 @@ export function DashboardSidebar({ channels = [], categories = [] }: DashboardSi
       )}
     >
       {isCollapsed ? (
-        <CollapsedSidebar />
+        <CollapsedSidebar categories={categories} />
       ) : (
         <DashboardSidebarContent channels={channels} categories={categories} />
       )}
@@ -287,7 +304,7 @@ export function DashboardSidebar({ channels = [], categories = [] }: DashboardSi
 }
 
 // Collapsed sidebar with just icons
-function CollapsedSidebar() {
+function CollapsedSidebar({ categories = [] }: { categories?: SidebarCategory[] }) {
   const pathname = usePathname();
   const tier = useSettingsStore((s) => s.tier);
   const tierData = tierInfo[tier];
@@ -302,7 +319,7 @@ function CollapsedSidebar() {
       </Link>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col items-center gap-2">
+      <nav className="flex-1 flex flex-col items-center gap-2 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -331,6 +348,48 @@ function CollapsedSidebar() {
             <Plus className="w-5 h-5" />
           </button>
         </AddChannelDialog>
+
+        {/* Categories divider */}
+        <div className="w-6 h-px bg-zinc-200 my-2" />
+
+        {/* Categories */}
+        {categories.slice(0, 5).map((category) => {
+          const isActive = pathname.includes(`category=${category.id}`);
+          return (
+            <Link
+              key={category.id}
+              href={`/dashboard?category=${category.id}`}
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                isActive
+                  ? "bg-teal-50 text-teal-600"
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+              )}
+              title={category.name}
+            >
+              <FolderOpen className="w-5 h-5" />
+            </Link>
+          );
+        })}
+
+        {/* Uncategorized */}
+        {(() => {
+          const isActive = pathname.includes("category=uncategorized");
+          return (
+            <Link
+              href="/dashboard?category=uncategorized"
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                isActive
+                  ? "bg-zinc-200 text-zinc-700"
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+              )}
+              title="Uncategorized"
+            >
+              <Inbox className="w-5 h-5" />
+            </Link>
+          );
+        })()}
 
         <div className="w-6 h-px bg-zinc-200 my-2" />
 

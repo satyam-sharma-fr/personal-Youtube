@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { VideoFeed } from "@/components/videos/video-feed";
 import { CategoryFilter } from "@/components/dashboard/category-filter";
 import { Button } from "@/components/ui/button";
-import { Plus, Tv, X, Tag } from "lucide-react";
+import { Plus, Tv, X, Tag, Inbox } from "lucide-react";
 
 interface DashboardPageProps {
   searchParams: Promise<{ channel?: string; category?: string }>;
@@ -69,8 +69,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     ? selectedChannelId 
     : null;
 
-  // Validate selectedCategoryId is one of user's categories
-  const validCategoryId = selectedCategoryId && categories?.some((c) => c.id === selectedCategoryId)
+  // Validate selectedCategoryId is one of user's categories (or "uncategorized")
+  const isUncategorized = selectedCategoryId === "uncategorized";
+  const validCategoryId = selectedCategoryId && (isUncategorized || categories?.some((c) => c.id === selectedCategoryId))
     ? selectedCategoryId
     : null;
 
@@ -87,9 +88,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // Get category info for header if filtering by category
   let selectedCategory: { id: string; name: string } | null = null;
   if (validCategoryId) {
-    const cat = categories?.find((c) => c.id === validCategoryId);
-    if (cat) {
-      selectedCategory = { id: cat.id, name: cat.name };
+    if (isUncategorized) {
+      selectedCategory = { id: "uncategorized", name: "Uncategorized" };
+    } else {
+      const cat = categories?.find((c) => c.id === validCategoryId);
+      if (cat) {
+        selectedCategory = { id: cat.id, name: cat.name };
+      }
     }
   }
 
@@ -100,59 +105,115 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     // Filter by specific channel
     feedChannelIds = [validChannelId];
   } else if (validCategoryId) {
-    // Filter by category - get channels in this category
-    const { data: categoryChannels } = await supabase
-      .from("channel_category_channels")
-      .select("channel_id")
-      .eq("user_id", user.id)
-      .eq("category_id", validCategoryId);
+    if (isUncategorized) {
+      // Filter by uncategorized - get channels NOT in any category
+      const { data: allCategorizedChannels } = await supabase
+        .from("channel_category_channels")
+        .select("channel_id")
+        .eq("user_id", user.id);
 
-    const categoryChannelIds = categoryChannels?.map((c) => c.channel_id) || [];
-    // Only include channels that are still subscribed
-    feedChannelIds = categoryChannelIds.filter((id) => channelIds.includes(id));
-    
-    if (feedChannelIds.length === 0) {
-      // No channels in this category
-      return (
-        <div>
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <Tag className="w-6 h-6" />
-                  {selectedCategory?.name}
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  <span className="flex items-center gap-2">
-                    No channels in this category
-                    <Link href="/dashboard">
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                        <X className="w-3 h-3 mr-1" />
-                        Clear filter
-                      </Button>
-                    </Link>
-                  </span>
-                </p>
+      const categorizedChannelIds = new Set(allCategorizedChannels?.map((c) => c.channel_id) || []);
+      // Get channels that are subscribed but not in any category
+      feedChannelIds = channelIds.filter((id) => !categorizedChannelIds.has(id));
+      
+      if (feedChannelIds.length === 0) {
+        // No uncategorized channels
+        return (
+          <div>
+            <div className="mb-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <Inbox className="w-6 h-6" />
+                    Uncategorized
+                  </h1>
+                  <p className="text-muted-foreground mt-1">
+                    <span className="flex items-center gap-2">
+                      No uncategorized channels
+                      <Link href="/dashboard">
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                          <X className="w-3 h-3 mr-1" />
+                          Clear filter
+                        </Button>
+                      </Link>
+                    </span>
+                  </p>
+                </div>
+                {categories && categories.length > 0 && (
+                  <CategoryFilter categories={categories} selectedCategoryId={validCategoryId} />
+                )}
               </div>
-              {categories && categories.length > 0 && (
-                <CategoryFilter categories={categories} selectedCategoryId={validCategoryId} />
-              )}
+            </div>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+              <h2 className="text-lg font-semibold mb-2">All channels are categorized</h2>
+              <p className="text-muted-foreground mb-4">
+                All your subscribed channels belong to a category.
+              </p>
+              <Link href="/channels">
+                <Button variant="outline">
+                  Manage Channels
+                </Button>
+              </Link>
             </div>
           </div>
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Tag className="w-12 h-12 text-muted-foreground mb-4" />
-            <h2 className="text-lg font-semibold mb-2">No channels in this category</h2>
-            <p className="text-muted-foreground mb-4">
-              Add channels to the "{selectedCategory?.name}" category to see videos here.
-            </p>
-            <Link href="/channels">
-              <Button variant="outline">
-                Manage Channels
-              </Button>
-            </Link>
+        );
+      }
+    } else {
+      // Filter by category - get channels in this category
+      const { data: categoryChannels } = await supabase
+        .from("channel_category_channels")
+        .select("channel_id")
+        .eq("user_id", user.id)
+        .eq("category_id", validCategoryId);
+
+      const categoryChannelIds = categoryChannels?.map((c) => c.channel_id) || [];
+      // Only include channels that are still subscribed
+      feedChannelIds = categoryChannelIds.filter((id) => channelIds.includes(id));
+      
+      if (feedChannelIds.length === 0) {
+        // No channels in this category
+        return (
+          <div>
+            <div className="mb-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <Tag className="w-6 h-6" />
+                    {selectedCategory?.name}
+                  </h1>
+                  <p className="text-muted-foreground mt-1">
+                    <span className="flex items-center gap-2">
+                      No channels in this category
+                      <Link href="/dashboard">
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                          <X className="w-3 h-3 mr-1" />
+                          Clear filter
+                        </Button>
+                      </Link>
+                    </span>
+                  </p>
+                </div>
+                {categories && categories.length > 0 && (
+                  <CategoryFilter categories={categories} selectedCategoryId={validCategoryId} />
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Tag className="w-12 h-12 text-muted-foreground mb-4" />
+              <h2 className="text-lg font-semibold mb-2">No channels in this category</h2>
+              <p className="text-muted-foreground mb-4">
+                Add channels to the "{selectedCategory?.name}" category to see videos here.
+              </p>
+              <Link href="/channels">
+                <Button variant="outline">
+                  Manage Channels
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
     }
   } else {
     // All subscribed channels
@@ -227,7 +288,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              {selectedCategory && <Tag className="w-6 h-6" />}
+              {selectedCategory && (isUncategorized ? <Inbox className="w-6 h-6" /> : <Tag className="w-6 h-6" />)}
               {filterTitle}
             </h1>
             <p className="text-muted-foreground mt-1">
