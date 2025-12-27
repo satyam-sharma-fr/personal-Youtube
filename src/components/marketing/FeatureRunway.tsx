@@ -468,15 +468,17 @@ function StatsPreview() {
   return (
     <div className="space-y-4">
       <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
-        <div className="flex items-end justify-between h-28 gap-2">
+        <div className="flex items-end justify-between gap-2">
           {days.map((day, i) => (
             <div key={day} className="flex-1 flex flex-col items-center gap-1">
-              <motion.div
-                initial={{ height: 0 }}
-                animate={{ height: `${heights[i]}%` }}
-                transition={{ duration: 0.5, delay: i * 0.05, ease: "easeOut" }}
-                className="w-full bg-gradient-to-t from-violet-500 to-violet-400 rounded-t-md"
-              />
+              <div className="w-full h-20 flex items-end">
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: `${heights[i]}%` }}
+                  transition={{ duration: 0.5, delay: i * 0.05, ease: "easeOut" }}
+                  className="w-full bg-gradient-to-t from-violet-500 to-violet-400 rounded-t-md"
+                />
+              </div>
               <span className="text-[10px] text-zinc-500 font-medium">{day}</span>
             </div>
           ))}
