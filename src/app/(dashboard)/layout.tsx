@@ -89,11 +89,36 @@ export default async function DashboardLayout({
     .eq("user_id", user.id)
     .order("name", { ascending: true });
 
-  const categories: SidebarCategory[] = (categoriesData || []).map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    image_url: cat.image_url,
-  }));
+  // Fetch channel-category mappings
+  const { data: channelCategoryMappings } = await supabase
+    .from("channel_category_channels")
+    .select("category_id, channel_id")
+    .eq("user_id", user.id);
+
+  // Create a map of category_id -> channel_ids
+  const categoryChannelsMap = new Map<string, string[]>();
+  (channelCategoryMappings || []).forEach((mapping) => {
+    const existing = categoryChannelsMap.get(mapping.category_id) || [];
+    existing.push(mapping.channel_id);
+    categoryChannelsMap.set(mapping.category_id, existing);
+  });
+
+  // Create a map of channel_id -> channel data for quick lookup
+  const channelMap = new Map(channels.map((ch) => [ch.channel_id, ch]));
+
+  const categories: SidebarCategory[] = (categoriesData || []).map((cat) => {
+    const channelIds = categoryChannelsMap.get(cat.id) || [];
+    const categoryChannels = channelIds
+      .map((id) => channelMap.get(id))
+      .filter((ch): ch is SubscribedChannel => ch !== undefined);
+    
+    return {
+      id: cat.id,
+      name: cat.name,
+      image_url: cat.image_url,
+      channels: categoryChannels,
+    };
+  });
 
   return (
     <DashboardShell channels={channels} categories={categories}>

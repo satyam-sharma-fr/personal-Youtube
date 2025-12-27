@@ -32,6 +32,11 @@ export interface SidebarCategory {
   id: string;
   name: string;
   image_url?: string | null;
+  channels?: {
+    channel_id: string;
+    title: string;
+    thumbnail_url: string | null;
+  }[];
 }
 
 interface DashboardShellProps {

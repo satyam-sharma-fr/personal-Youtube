@@ -17,11 +17,13 @@ import {
   ChevronUp,
   Sparkles,
   ChevronRight,
+  ChevronDown,
   FolderOpen,
   Plus,
   LayoutGrid,
   Inbox,
 } from "lucide-react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -68,6 +70,7 @@ export function DashboardSidebarContent({ channels = [], categories = [] }: Dash
   const tierData = tierInfo[tier];
   const supabase = createClient();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -75,11 +78,38 @@ export function DashboardSidebarContent({ channels = [], categories = [] }: Dash
     });
   }, [supabase.auth]);
 
+  // Auto-expand category if it's active in the URL
+  useEffect(() => {
+    const match = pathname.match(/category=([^&]+)/);
+    if (match && match[1] && match[1] !== "uncategorized") {
+      setExpandedCategories((prev) => new Set([...prev, match[1]]));
+    }
+  }, [pathname]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     toast.success("Signed out successfully");
     router.push("/");
     router.refresh();
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  };
+
+  const handleCategoryClick = (categoryId: string) => {
+    // Toggle the dropdown
+    toggleCategory(categoryId);
+    // Navigate to the category feed
+    router.push(`/dashboard?category=${categoryId}`);
   };
 
   return (
@@ -143,40 +173,156 @@ export function DashboardSidebarContent({ channels = [], categories = [] }: Dash
           <p className="px-3 py-2 text-xs font-medium text-zinc-400 uppercase tracking-wider">
             Categories
           </p>
-          {categories.slice(0, 5).map((category) => {
+          {categories.slice(0, 8).map((category) => {
             const isActive = pathname.includes(`category=${category.id}`);
+            const isExpanded = expandedCategories.has(category.id);
+            const categoryChannels = category.channels || [];
+            const hasChannels = categoryChannels.length > 0;
+
             return (
-              <Link
-                key={category.id}
-                href={`/dashboard?category=${category.id}`}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-teal-50 text-teal-600 shadow-sm"
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+              <div key={category.id}>
+                <button
+                  onClick={() => handleCategoryClick(category.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                    isActive
+                      ? "bg-teal-50 text-teal-600 shadow-sm"
+                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                  )}
+                >
+                  <FolderOpen className={cn("w-5 h-5 flex-shrink-0", isActive && "text-teal-600")} />
+                  <span className="truncate flex-1 text-left">{category.name}</span>
+                  {hasChannels && (
+                    <span className="text-xs text-zinc-400 mr-1">{categoryChannels.length}</span>
+                  )}
+                  {hasChannels && (
+                    isExpanded ? (
+                      <ChevronDown className="w-4 h-4 flex-shrink-0 text-zinc-400" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 flex-shrink-0 text-zinc-400" />
+                    )
+                  )}
+                </button>
+                
+                {/* Channel dropdown */}
+                {isExpanded && hasChannels && (
+                  <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-zinc-200 pl-2">
+                    {categoryChannels.map((channel) => {
+                      const isChannelActive = pathname.includes(`channel=${channel.channel_id}`);
+                      return (
+                        <Link
+                          key={channel.channel_id}
+                          href={`/dashboard?channel=${channel.channel_id}`}
+                          className={cn(
+                            "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-all",
+                            isChannelActive
+                              ? "bg-zinc-100 text-zinc-900"
+                              : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
+                          )}
+                        >
+                          {channel.thumbnail_url ? (
+                            <Image
+                              src={channel.thumbnail_url}
+                              alt={channel.title}
+                              width={20}
+                              height={20}
+                              className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-zinc-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[8px] font-bold text-zinc-500">
+                                {channel.title[0]?.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          <span className="truncate">{channel.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <FolderOpen className={cn("w-5 h-5", isActive && "text-teal-600")} />
-                <span className="truncate">{category.name}</span>
-              </Link>
+              </div>
             );
           })}
           {/* Uncategorized */}
           {(() => {
             const isActive = pathname.includes("category=uncategorized");
+            // Get uncategorized channels (channels not in any category)
+            const categorizedChannelIds = new Set(
+              categories.flatMap((cat) => (cat.channels || []).map((ch) => ch.channel_id))
+            );
+            const uncategorizedChannels = channels.filter(
+              (ch) => !categorizedChannelIds.has(ch.channel_id)
+            );
+            const isExpanded = expandedCategories.has("uncategorized");
+            const hasChannels = uncategorizedChannels.length > 0;
+
             return (
-              <Link
-                href="/dashboard?category=uncategorized"
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-zinc-200 text-zinc-800 shadow-sm"
-                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+              <div>
+                <button
+                  onClick={() => {
+                    toggleCategory("uncategorized");
+                    router.push("/dashboard?category=uncategorized");
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                    isActive
+                      ? "bg-zinc-200 text-zinc-800 shadow-sm"
+                      : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+                  )}
+                >
+                  <Inbox className={cn("w-5 h-5 flex-shrink-0", isActive && "text-zinc-600")} />
+                  <span className="truncate flex-1 text-left">Uncategorized</span>
+                  {hasChannels && (
+                    <span className="text-xs text-zinc-400 mr-1">{uncategorizedChannels.length}</span>
+                  )}
+                  {hasChannels && (
+                    isExpanded ? (
+                      <ChevronDown className="w-4 h-4 flex-shrink-0 text-zinc-400" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 flex-shrink-0 text-zinc-400" />
+                    )
+                  )}
+                </button>
+
+                {/* Uncategorized channel dropdown */}
+                {isExpanded && hasChannels && (
+                  <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-zinc-200 pl-2">
+                    {uncategorizedChannels.map((channel) => {
+                      const isChannelActive = pathname.includes(`channel=${channel.channel_id}`);
+                      return (
+                        <Link
+                          key={channel.channel_id}
+                          href={`/dashboard?channel=${channel.channel_id}`}
+                          className={cn(
+                            "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-all",
+                            isChannelActive
+                              ? "bg-zinc-100 text-zinc-900"
+                              : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
+                          )}
+                        >
+                          {channel.thumbnail_url ? (
+                            <Image
+                              src={channel.thumbnail_url}
+                              alt={channel.title}
+                              width={20}
+                              height={20}
+                              className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-zinc-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[8px] font-bold text-zinc-500">
+                                {channel.title[0]?.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          <span className="truncate">{channel.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <Inbox className={cn("w-5 h-5", isActive && "text-zinc-600")} />
-                <span className="truncate">Uncategorized</span>
-              </Link>
+              </div>
             );
           })()}
         </nav>
@@ -295,7 +441,7 @@ export function DashboardSidebar({ channels = [], categories = [] }: DashboardSi
       )}
     >
       {isCollapsed ? (
-        <CollapsedSidebar categories={categories} />
+        <CollapsedSidebar categories={categories} channels={channels} />
       ) : (
         <DashboardSidebarContent channels={channels} categories={categories} />
       )}
@@ -304,10 +450,18 @@ export function DashboardSidebar({ channels = [], categories = [] }: DashboardSi
 }
 
 // Collapsed sidebar with just icons
-function CollapsedSidebar({ categories = [] }: { categories?: SidebarCategory[] }) {
+function CollapsedSidebar({ categories = [], channels = [] }: { categories?: SidebarCategory[]; channels?: SubscribedChannel[] }) {
   const pathname = usePathname();
   const tier = useSettingsStore((s) => s.tier);
   const tierData = tierInfo[tier];
+
+  // Get uncategorized channels
+  const categorizedChannelIds = new Set(
+    categories.flatMap((cat) => (cat.channels || []).map((ch) => ch.channel_id))
+  );
+  const uncategorizedChannels = channels.filter(
+    (ch) => !categorizedChannelIds.has(ch.channel_id)
+  );
 
   return (
     <div className="flex flex-col h-full items-center py-4">
@@ -352,42 +506,149 @@ function CollapsedSidebar({ categories = [] }: { categories?: SidebarCategory[] 
         {/* Categories divider */}
         <div className="w-6 h-px bg-zinc-200 my-2" />
 
-        {/* Categories */}
+        {/* Categories with dropdowns */}
         {categories.slice(0, 5).map((category) => {
           const isActive = pathname.includes(`category=${category.id}`);
+          const categoryChannels = category.channels || [];
+          const hasChannels = categoryChannels.length > 0;
+
+          if (!hasChannels) {
+            return (
+              <Link
+                key={category.id}
+                href={`/dashboard?category=${category.id}`}
+                className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                  isActive
+                    ? "bg-teal-50 text-teal-600"
+                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                )}
+                title={category.name}
+              >
+                <FolderOpen className="w-5 h-5" />
+              </Link>
+            );
+          }
+
           return (
-            <Link
-              key={category.id}
-              href={`/dashboard?category=${category.id}`}
-              className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                isActive
-                  ? "bg-teal-50 text-teal-600"
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-              )}
-              title={category.name}
-            >
-              <FolderOpen className="w-5 h-5" />
-            </Link>
+            <DropdownMenu key={category.id}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                    isActive
+                      ? "bg-teal-50 text-teal-600"
+                      : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                  )}
+                  title={category.name}
+                >
+                  <FolderOpen className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="start" className="w-56 bg-white border-zinc-200">
+                <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 font-medium">
+                  <Link href={`/dashboard?category=${category.id}`}>
+                    <FolderOpen className="mr-2 h-4 w-4 text-teal-600" />
+                    All in {category.name}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-200" />
+                {categoryChannels.slice(0, 8).map((channel) => (
+                  <DropdownMenuItem key={channel.channel_id} asChild className="text-zinc-600 hover:bg-zinc-50 focus:bg-zinc-50">
+                    <Link href={`/dashboard?channel=${channel.channel_id}`} className="flex items-center">
+                      {channel.thumbnail_url ? (
+                        <Image
+                          src={channel.thumbnail_url}
+                          alt={channel.title}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 rounded-full object-cover mr-2"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-zinc-200 flex items-center justify-center mr-2">
+                          <span className="text-[8px] font-bold text-zinc-500">
+                            {channel.title[0]?.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span className="truncate">{channel.title}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         })}
 
-        {/* Uncategorized */}
+        {/* Uncategorized with dropdown */}
         {(() => {
           const isActive = pathname.includes("category=uncategorized");
+          const hasChannels = uncategorizedChannels.length > 0;
+
+          if (!hasChannels) {
+            return (
+              <Link
+                href="/dashboard?category=uncategorized"
+                className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                  isActive
+                    ? "bg-zinc-200 text-zinc-700"
+                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                )}
+                title="Uncategorized"
+              >
+                <Inbox className="w-5 h-5" />
+              </Link>
+            );
+          }
+
           return (
-            <Link
-              href="/dashboard?category=uncategorized"
-              className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                isActive
-                  ? "bg-zinc-200 text-zinc-700"
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-              )}
-              title="Uncategorized"
-            >
-              <Inbox className="w-5 h-5" />
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                    isActive
+                      ? "bg-zinc-200 text-zinc-700"
+                      : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                  )}
+                  title="Uncategorized"
+                >
+                  <Inbox className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="start" className="w-56 bg-white border-zinc-200">
+                <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 font-medium">
+                  <Link href="/dashboard?category=uncategorized">
+                    <Inbox className="mr-2 h-4 w-4 text-zinc-600" />
+                    All Uncategorized
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-200" />
+                {uncategorizedChannels.slice(0, 8).map((channel) => (
+                  <DropdownMenuItem key={channel.channel_id} asChild className="text-zinc-600 hover:bg-zinc-50 focus:bg-zinc-50">
+                    <Link href={`/dashboard?channel=${channel.channel_id}`} className="flex items-center">
+                      {channel.thumbnail_url ? (
+                        <Image
+                          src={channel.thumbnail_url}
+                          alt={channel.title}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 rounded-full object-cover mr-2"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-zinc-200 flex items-center justify-center mr-2">
+                          <span className="text-[8px] font-bold text-zinc-500">
+                            {channel.title[0]?.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span className="truncate">{channel.title}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         })()}
 
