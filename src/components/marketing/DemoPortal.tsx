@@ -636,31 +636,13 @@ export function DemoPortal() {
                   {/* Empty state with visual prompt */}
                   {selectedChannels.length === 0 && searchResults.length === 0 && (
                     <div className="text-center py-6">
-                      {/* Animated prompt */}
+                      {/* Search icon */}
                       <motion.div
-                        className="relative mb-4"
+                        className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto shadow-lg shadow-red-500/30 mb-4"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
-                        <motion.div
-                          className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto shadow-lg shadow-red-500/30"
-                          animate={{
-                            scale: [1, 1.05, 1],
-                          }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                          <Search className="w-7 h-7 text-white" />
-                        </motion.div>
-                        {/* Pulsing ring */}
-                        <motion.div
-                          className="absolute inset-0 w-16 h-16 rounded-2xl border-2 border-red-400 mx-auto"
-                          animate={{
-                            scale: [1, 1.3, 1.3],
-                            opacity: [0.8, 0, 0],
-                          }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                          style={{ left: '50%', transform: 'translateX(-50%)' }}
-                        />
+                        <Search className="w-7 h-7 text-white" />
                       </motion.div>
 
                       <motion.div

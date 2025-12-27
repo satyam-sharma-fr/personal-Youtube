@@ -7,7 +7,7 @@ const protectedRoutes = ["/dashboard", "/channels", "/watch", "/settings"];
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ["/login", "/signup"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
