@@ -9,7 +9,6 @@ import {
   PrinciplesPrismCards,
   PricingTiers,
   SocialProof,
-  WaitlistForm,
   FAQ,
   Footer,
   MarketingChannelsProvider,
@@ -37,7 +36,6 @@ export default function LandingPage() {
         <PrinciplesPrismCards />
         <PricingTiers />
         <SocialProof />
-        <WaitlistForm />
         <FAQ />
       </main>
       <Footer />

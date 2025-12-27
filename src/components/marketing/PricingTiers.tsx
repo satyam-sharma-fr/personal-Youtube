@@ -239,7 +239,7 @@ export function PricingTiers() {
           {/* Trust note */}
           <motion.div variants={fadeUp} className="text-center mt-12">
             <p className="text-sm text-zinc-500">
-              All plans include a 14-day free trial. Cancel anytime.
+              Paid plans include a 7-day free trial. Cancel anytime.
             </p>
           </motion.div>
         </motion.div>

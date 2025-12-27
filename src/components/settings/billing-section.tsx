@@ -167,8 +167,14 @@ export function BillingSection({
                   <h3 className="font-semibold">{tierInfo.name} Plan</h3>
                   <Badge variant="secondary">{tierInfo.price}</Badge>
                   {subscriptionStatus && subscriptionStatus !== "active" && (
-                    <Badge variant="destructive" className="capitalize">
-                      {subscriptionStatus}
+                    <Badge 
+                      variant={subscriptionStatus === "trialing" ? "outline" : "destructive"} 
+                      className={subscriptionStatus === "trialing" 
+                        ? "border-amber-500 text-amber-600 bg-amber-50" 
+                        : "capitalize"
+                      }
+                    >
+                      {subscriptionStatus === "trialing" ? "Trial Active" : subscriptionStatus}
                     </Badge>
                   )}
                 </div>

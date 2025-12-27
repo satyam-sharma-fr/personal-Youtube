@@ -80,7 +80,7 @@ export const TIERS: Record<TierID, TierConfig> = {
       "Forever watch history",
       "Export channel list",
       "Priority support",
-      "Early access to features",
+      "Priority access to new features",
       "7-day free trial",
     ],
   },

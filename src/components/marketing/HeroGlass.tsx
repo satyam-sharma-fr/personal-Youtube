@@ -327,12 +327,12 @@ export function HeroGlass() {
               variants={fadeUp}
               className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
             >
-              <Link href="#waitlist">
+              <Link href="#pricing">
                 <Button
                   size="lg"
                   className="h-14 px-8 text-base bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20 rounded-xl"
                 >
-                  Get Early Access
+                  Get Started
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
@@ -364,13 +364,13 @@ export function HeroGlass() {
                   <img
                     key={i}
                     src={src}
-                    alt={`Waitlist member ${i + 1}`}
+                    alt={`Happy user ${i + 1}`}
                     className="w-8 h-8 rounded-full border-2 border-white object-cover"
                   />
                 ))}
               </div>
               <div className="text-sm text-zinc-500">
-                <span className="font-semibold text-zinc-700">500+</span> people on the waitlist
+                <span className="font-semibold text-zinc-700">500+</span> happy users
               </div>
             </motion.div>
           </motion.div>

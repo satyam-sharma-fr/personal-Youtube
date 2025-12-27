@@ -145,13 +145,13 @@ export function Hero() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Link href="#waitlist">
+            <Link href="#pricing">
               <Button
                 size="lg"
                 className="h-14 px-8 text-lg group relative overflow-hidden"
               >
                 <span className="relative z-10 flex items-center">
-                  Join Early Access
+                  Get Started
                   <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </span>
                 <motion.div
