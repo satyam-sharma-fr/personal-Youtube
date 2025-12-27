@@ -6,57 +6,59 @@ import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Tv, Clock, Check, Grid3X3 } from "lucide-react";
 import { staggerContainer, fadeUp, scaleIn } from "./motion";
+import { ParticleDust, FloatingElements } from "./zen-animations";
+import { ParticleReorg } from "./zen-animations/ChaosToCalm";
 
 // Videos from provided YouTube links for hero animation
 // Video IDs extracted from the user-provided URLs:
-// 1. https://youtu.be/9RV5gttT6rA
-// 2. https://youtu.be/v-sCZN3FbR0
-// 3. https://youtu.be/bxGE_LXPyAU
-// 4. https://youtu.be/9NjA41wShTI
+// 1. https://youtu.be/9RV5gttT6rA - Shubham SHARMA
+// 2. https://youtu.be/v-sCZN3FbR0 - Marques Brownlee
+// 3. https://youtu.be/bxGE_LXPyAU - Nate Herk | AI Automation
+// 4. https://youtu.be/9NjA41wShTI - Varun Mayya
 const HERO_VIDEOS = [
   {
     id: 1,
     thumbnail: "https://i.ytimg.com/vi/9RV5gttT6rA/hqdefault.jpg",
-    title: "Building Modern Web Apps",
-    channel: "Fireship",
-    channelInitials: "FS",
+    title: "Le guide ultime pour comprendre les MCP",
+    channel: "Shubham SHARMA",
+    channelInitials: "SS",
     category: "Tech",
-    views: "1.2M views",
+    views: "268K views",
     time: "1 week ago",
-    duration: "12:34",
+    duration: "45:12",
   },
   {
     id: 2,
     thumbnail: "https://i.ytimg.com/vi/v-sCZN3FbR0/hqdefault.jpg",
-    title: "The Science of Learning",
-    channel: "Veritasium",
-    channelInitials: "VE",
-    category: "Science",
-    views: "890K views",
-    time: "3 days ago",
-    duration: "8:45",
+    title: "Every Mistake I Made in 2025",
+    channel: "Marques Brownlee",
+    channelInitials: "MB",
+    category: "Tech",
+    views: "1M views",
+    time: "4 days ago",
+    duration: "18:32",
   },
   {
     id: 3,
     thumbnail: "https://i.ytimg.com/vi/bxGE_LXPyAU/hqdefault.jpg",
-    title: "Deep Dive into AI",
-    channel: "3Blue1Brown",
-    channelInitials: "3B",
+    title: "I built an AI Agent in 2 hours",
+    channel: "Nate Herk",
+    channelInitials: "NH",
     category: "Tech",
-    views: "2.1M views",
-    time: "2 weeks ago",
-    duration: "15:22",
+    views: "24K views",
+    time: "9 days ago",
+    duration: "12:45",
   },
   {
     id: 4,
     thumbnail: "https://i.ytimg.com/vi/9NjA41wShTI/hqdefault.jpg",
-    title: "Creative Coding Tutorial",
-    channel: "The Coding Train",
-    channelInitials: "CT",
+    title: "Scaling A Startup with Zero Funding",
+    channel: "Varun Mayya",
+    channelInitials: "VM",
     category: "Learning",
-    views: "560K views",
+    views: "69K views",
     time: "5 days ago",
-    duration: "10:18",
+    duration: "22:18",
   },
 ];
 
@@ -203,6 +205,9 @@ export function HeroGlass() {
   const [mode, setMode] = useState<"algorithm" | "you">("algorithm");
   const shouldReduceMotion = useReducedMotion();
   const copy = mode === "algorithm" ? algorithmCopy : youCopy;
+  
+  // Map toggle state to animation mode
+  const animationMode = mode === "algorithm" ? "chaos" : "calm";
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
@@ -212,30 +217,65 @@ export function HeroGlass() {
       {/* Subtle grid pattern */}
       <div className="absolute inset-0 bg-grid-pattern" />
       
-      {/* Gradient orbs */}
+      {/* Chaos → Calm animated background layers */}
+      <ParticleDust 
+        mode={animationMode} 
+        count={animationMode === "chaos" ? 28 : 16}
+        showPlayIcons={animationMode === "chaos"}
+        className="z-0"
+      />
+      <FloatingElements 
+        mode={animationMode}
+        className="z-0 opacity-60"
+      />
+      <ParticleReorg 
+        mode={animationMode}
+        particleCount={12}
+        className="z-0"
+      />
+      
+      {/* Gradient orbs - color shifts with mode */}
       <motion.div
-        className="absolute top-1/4 -left-32 w-[500px] h-[500px] rounded-full opacity-60"
+        className="absolute top-1/4 -left-32 w-[500px] h-[500px] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(255, 0, 0, 0.08) 0%, transparent 70%)",
           filter: "blur(60px)",
         }}
-        animate={shouldReduceMotion ? {} : {
-          x: [0, 30, 0],
-          y: [0, -20, 0],
+        animate={{
+          background: animationMode === "chaos" 
+            ? "radial-gradient(circle, rgba(255, 0, 0, 0.12) 0%, transparent 70%)"
+            : "radial-gradient(circle, rgba(13, 148, 136, 0.08) 0%, transparent 70%)",
+          opacity: animationMode === "chaos" ? 0.7 : 0.5,
+          x: shouldReduceMotion ? 0 : [0, 30, 0],
+          y: shouldReduceMotion ? 0 : [0, -20, 0],
         }}
-        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ 
+          duration: 20, 
+          repeat: Infinity, 
+          ease: "easeInOut",
+          background: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
+          opacity: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
+        }}
       />
       <motion.div
-        className="absolute bottom-1/4 -right-32 w-[400px] h-[400px] rounded-full opacity-60"
+        className="absolute bottom-1/4 -right-32 w-[400px] h-[400px] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(13, 148, 136, 0.08) 0%, transparent 70%)",
           filter: "blur(60px)",
         }}
-        animate={shouldReduceMotion ? {} : {
-          x: [0, -30, 0],
-          y: [0, 20, 0],
+        animate={{
+          background: animationMode === "chaos"
+            ? "radial-gradient(circle, rgba(255, 100, 100, 0.08) 0%, transparent 70%)"
+            : "radial-gradient(circle, rgba(13, 148, 136, 0.12) 0%, transparent 70%)",
+          opacity: animationMode === "chaos" ? 0.5 : 0.7,
+          x: shouldReduceMotion ? 0 : [0, -30, 0],
+          y: shouldReduceMotion ? 0 : [0, 20, 0],
         }}
-        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ 
+          duration: 15, 
+          repeat: Infinity, 
+          ease: "easeInOut",
+          background: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
+          opacity: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
+        }}
       />
 
       <div className="container mx-auto px-4 relative z-10">
