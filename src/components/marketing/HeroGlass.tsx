@@ -354,10 +354,18 @@ export function HeroGlass() {
               className="mt-10 flex items-center justify-center lg:justify-start gap-6"
             >
               <div className="flex -space-x-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div
+                {[
+                  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
+                  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+                  "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=100&h=100&fit=crop&crop=face",
+                  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+                  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
+                ].map((src, i) => (
+                  <img
                     key={i}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-200 to-zinc-300 border-2 border-white"
+                    src={src}
+                    alt={`Waitlist member ${i + 1}`}
+                    className="w-8 h-8 rounded-full border-2 border-white object-cover"
                   />
                 ))}
               </div>
