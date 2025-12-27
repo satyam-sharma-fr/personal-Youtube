@@ -5,6 +5,8 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardShell, ChannelsProvider, CategoriesProvider, type SubscribedChannel, type SidebarCategory } from "@/components/dashboard/dashboard-shell";
 import { WatchTimeProvider, LimitReachedModal } from "@/components/watch-timer";
 import { ensureDefaultCategories } from "@/app/actions/categories";
+import { TierSync } from "@/components/dashboard/tier-sync";
+import type { Tier } from "@/stores/settingsStore";
 
 // Get today's date in YYYY-MM-DD format for a given timezone
 function getLocalDate(timezone: string = "UTC"): string {
@@ -120,11 +122,16 @@ export default async function DashboardLayout({
     };
   });
 
+  // Get the subscription tier from profile (default to "free")
+  const subscriptionTier = (profile?.subscription_tier || "free") as Tier;
+
   return (
     <DashboardShell channels={channels} categories={categories}>
       <ChannelsProvider channels={channels}>
         <CategoriesProvider categories={categories}>
           <WatchTimeProvider initialData={watchTimeData}>
+            {/* Sync the tier from database to client-side store */}
+            <TierSync tier={subscriptionTier} />
             <div className="min-h-screen bg-zinc-50">
               <DashboardNav user={user} profile={profile} />
               <div className="flex">
