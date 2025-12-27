@@ -5,8 +5,6 @@ import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { 
   Play, 
   ThumbsUp, 
-  Bell, 
-  Clock, 
   Shuffle, 
   X, 
   Check, 
@@ -16,9 +14,11 @@ import {
   TrendingUp,
   Radio,
   Tv,
+  Plus,
 } from "lucide-react";
 import { fadeUp, staggerContainer } from "./motion";
 import { cn } from "@/lib/utils";
+import { useMarketingChannels } from "./MarketingChannelsContext";
 
 // Noisy YouTube-like recommendations
 const noisyElements = [
@@ -30,8 +30,8 @@ const noisyElements = [
   { icon: Sparkles, label: "New to you", category: "Discover", color: "text-blue-500", bg: "bg-blue-50" },
 ];
 
-// Clean FocusTube channels
-const cleanChannels = [
+// Fallback channels (used when no channels selected)
+const fallbackChannels = [
   { 
     name: "3Blue1Brown", 
     avatar: "https://yt3.googleusercontent.com/ytc/AIdro_nFzgcTrxulXeYVmDXRAblMhvQ-MjI1aTXU3kqwQS5a=s176-c-k-c0x00ffffff-no-rj",
@@ -55,6 +55,17 @@ const cleanChannels = [
 export function BeforeAfterRefraction() {
   const [activeView, setActiveView] = useState<"before" | "after">("before");
   const shouldReduceMotion = useReducedMotion();
+  const { selectedChannels } = useMarketingChannels();
+
+  // Use selected channels if available, otherwise show fallback
+  const displayChannels = selectedChannels.length > 0
+    ? selectedChannels.map((ch) => ({
+        name: ch.title,
+        avatar: ch.thumbnailUrl,
+        video: "Latest video from your feed",
+        time: "Recently",
+      }))
+    : fallbackChannels;
 
   return (
     <section className="relative py-24 md:py-32 overflow-hidden bg-white">
@@ -258,46 +269,68 @@ export function BeforeAfterRefraction() {
                         transition={{ duration: 0.4 }}
                         className="space-y-3"
                       >
-                        {cleanChannels.map((channel, i) => (
-                          <motion.div
-                            key={channel.name}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: shouldReduceMotion ? 0 : i * 0.1 }}
-                            className="flex items-center gap-4 p-4 rounded-xl bg-teal-50/50 border border-teal-100 hover:border-teal-200 hover:bg-teal-50 transition-all cursor-pointer group"
-                          >
-                            <img
-                              src={channel.avatar}
-                              alt={channel.name}
-                              className="w-12 h-12 rounded-full group-hover:scale-105 transition-transform"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-zinc-900 group-hover:text-teal-700 transition-colors">
-                                {channel.video}
-                              </div>
-                              <div className="text-sm text-zinc-500">
-                                {channel.name}
-                              </div>
-                              <div className="text-xs text-zinc-400 mt-0.5">
-                                {channel.time}
-                              </div>
+                        {displayChannels.length > 0 ? (
+                          <>
+                            {displayChannels.map((channel, i) => (
+                              <motion.div
+                                key={`${channel.name}-${i}`}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: shouldReduceMotion ? 0 : i * 0.1 }}
+                                className="flex items-center gap-4 p-4 rounded-xl bg-teal-50/50 border border-teal-100 hover:border-teal-200 hover:bg-teal-50 transition-all cursor-pointer group"
+                              >
+                                <img
+                                  src={channel.avatar}
+                                  alt={channel.name}
+                                  className="w-12 h-12 rounded-full group-hover:scale-105 transition-transform"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(channel.name)}&background=0d9488&color=fff`;
+                                  }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-zinc-900 group-hover:text-teal-700 transition-colors">
+                                    {channel.video}
+                                  </div>
+                                  <div className="text-sm text-zinc-500">
+                                    {channel.name}
+                                  </div>
+                                  <div className="text-xs text-zinc-400 mt-0.5">
+                                    {channel.time}
+                                  </div>
+                                </div>
+                                <Play className="w-5 h-5 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </motion.div>
+                            ))}
+                            <div className="text-center pt-6">
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: 0.5, type: "spring" }}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 text-teal-700"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                  {selectedChannels.length > 0 
+                                    ? `That's it. Only your ${selectedChannels.length} channel${selectedChannels.length !== 1 ? "s" : ""}.`
+                                    : "That's it. Only what you chose."
+                                  }
+                                </span>
+                              </motion.div>
                             </div>
-                            <Play className="w-5 h-5 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </motion.div>
-                        ))}
-                        <div className="text-center pt-6">
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.5, type: "spring" }}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 text-teal-700"
-                          >
-                            <Check className="w-4 h-4" />
-                            <span className="text-sm font-medium">
-                              That's it. Only what you chose.
-                            </span>
-                          </motion.div>
-                        </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4">
+                              <Plus className="w-8 h-8 text-teal-600" />
+                            </div>
+                            <p className="text-zinc-600 font-medium mb-2">
+                              Add channels above to see your purified feed
+                            </p>
+                            <p className="text-sm text-zinc-400">
+                              Your selected channels will appear here
+                            </p>
+                          </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>

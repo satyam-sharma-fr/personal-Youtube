@@ -114,7 +114,7 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
           <NavTimer />
 
           {profile?.subscription_tier === "free" && (
-            <Link href="/dashboard/settings">
+            <Link href="/settings#billing">
               <Button 
                 size="sm" 
                 className="hidden sm:flex bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md shadow-red-500/20"
@@ -149,19 +149,19 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-zinc-200" />
               <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 cursor-pointer">
-                <Link href="/dashboard/settings">
+                <Link href="/profile">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 cursor-pointer">
-                <Link href="/dashboard/settings">
+                <Link href="/settings">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50 cursor-pointer">
-                <Link href="/dashboard/settings">
+                <Link href="/settings#billing">
                   <CreditCard className="mr-2 h-4 w-4" />
                   Billing
                 </Link>

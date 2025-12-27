@@ -51,3 +51,4 @@ console.log('  for size in 16 32 48 128; do');
 console.log('    rsvg-convert -w $size -h $size icons/icon$size.svg > icons/icon$size.png');
 console.log('  done');
 
+

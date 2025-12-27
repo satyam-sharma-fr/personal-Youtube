@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { 
   Plus, 
@@ -14,9 +14,15 @@ import {
   Eye,
   ArrowRight,
   Tv,
+  Search,
+  Loader2,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { fadeUp, staggerContainer, zenEase } from "./motion";
 import { cn } from "@/lib/utils";
+import { useMarketingChannels, type MarketingChannel } from "./MarketingChannelsContext";
+import { searchChannelsPublic } from "@/app/actions/marketing-youtube";
 
 const features = [
   {
@@ -89,37 +95,223 @@ const features = [
 
 // Preview components for each feature
 function ChannelsPreview() {
-  const channels = [
-    { name: "3Blue1Brown", initials: "3B", avatar: "https://yt3.googleusercontent.com/ytc/AIdro_nFzgcTrxulXeYVmDXRAblMhvQ-MjI1aTXU3kqwQS5a=s176-c-k-c0x00ffffff-no-rj" },
-    { name: "Fireship", initials: "FS", avatar: "https://yt3.googleusercontent.com/ytc/AIdro_k_D9hKDXhJDNf1tSNJoXMTT8-OVx3jHfsmFnQOBA=s176-c-k-c0x00ffffff-no-rj" },
-    { name: "Veritasium", initials: "VE", avatar: "https://yt3.googleusercontent.com/ytc/AIdro_kED97yk3MKP6Abzc5u9pnNBWH8pKzYh-36EJNWBLpvhg=s176-c-k-c0x00ffffff-no-rj" },
-  ];
+  const { selectedChannels, addChannel, removeChannel, canAddMore, maxChannels } = useMarketingChannels();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<MarketingChannel[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+
+  // Debounced search
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const result = await searchChannelsPublic(searchQuery);
+        if (result.channels) {
+          setSearchResults(
+            result.channels.map((ch) => ({
+              channelId: ch.channelId,
+              title: ch.title,
+              thumbnailUrl: ch.thumbnailUrl,
+              subscriberCount: ch.subscriberCount,
+              customUrl: ch.customUrl,
+            }))
+          );
+        }
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleAddChannel = useCallback(
+    (channel: MarketingChannel) => {
+      addChannel(channel);
+      setSearchQuery("");
+      setSearchResults([]);
+      setShowSearch(false);
+    },
+    [addChannel]
+  );
+
+  // Filter out already selected channels from search results
+  const filteredResults = searchResults.filter(
+    (ch) => !selectedChannels.some((s) => s.channelId === ch.channelId)
+  );
+
   return (
     <div className="space-y-3">
-      {channels.map((ch, i) => (
+      {/* Selected channels */}
+      <AnimatePresence mode="popLayout">
+        {selectedChannels.map((ch, i) => (
+          <motion.div
+            key={ch.channelId}
+            initial={{ opacity: 0, x: -20, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 20, scale: 0.95 }}
+            transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
+            className="flex items-center gap-3 p-3 rounded-xl bg-teal-50 border border-teal-200 shadow-sm"
+          >
+            <img
+              src={ch.thumbnailUrl}
+              alt={ch.title}
+              className="w-10 h-10 rounded-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ch.title)}&background=0d9488&color=fff`;
+              }}
+            />
+            <span className="font-medium text-zinc-900 truncate flex-1">{ch.title}</span>
+            <button
+              onClick={() => removeChannel(ch.channelId)}
+              className="w-6 h-6 rounded-full bg-zinc-100 hover:bg-red-100 flex items-center justify-center transition-colors group"
+            >
+              <X className="w-3.5 h-3.5 text-zinc-400 group-hover:text-red-500" />
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Search input */}
+      {showSearch ? (
         <motion.div
-          key={ch.name}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.1 }}
-          className="flex items-center gap-3 p-3 rounded-xl bg-white border border-zinc-200 shadow-sm hover:shadow-md transition-shadow"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-2"
         >
-          <img src={ch.avatar} alt={ch.name} className="w-10 h-10 rounded-full" />
-          <span className="font-medium text-zinc-900">{ch.name}</span>
-          <Check className="w-4 h-4 text-teal-500 ml-auto" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search YouTube channels..."
+              autoFocus
+              className="w-full h-10 pl-10 pr-10 rounded-xl bg-white border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all"
+            />
+            {isSearching && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 animate-spin" />
+            )}
+            {!isSearching && searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Search results dropdown */}
+          {filteredResults.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-xl border border-zinc-200 shadow-lg max-h-48 overflow-y-auto"
+            >
+              {filteredResults.slice(0, 5).map((ch) => (
+                <button
+                  key={ch.channelId}
+                  onClick={() => handleAddChannel(ch)}
+                  disabled={!canAddMore}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors text-left",
+                    !canAddMore && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <img
+                    src={ch.thumbnailUrl}
+                    alt={ch.title}
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ch.title)}&background=dc2626&color=fff`;
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-zinc-900 truncate">{ch.title}</div>
+                    {ch.subscriberCount && (
+                      <div className="text-xs text-zinc-500">
+                        {formatSubscribers(ch.subscriberCount)} subscribers
+                      </div>
+                    )}
+                  </div>
+                  <Plus className="w-4 h-4 text-red-500 flex-shrink-0" />
+                </button>
+              ))}
+            </motion.div>
+          )}
+
+          {/* No results */}
+          {searchQuery.length >= 2 && !isSearching && filteredResults.length === 0 && searchResults.length === 0 && (
+            <div className="text-sm text-zinc-500 text-center py-3">
+              No channels found
+            </div>
+          )}
+
+          {/* Cancel button */}
+          <button
+            onClick={() => {
+              setShowSearch(false);
+              setSearchQuery("");
+              setSearchResults([]);
+            }}
+            className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+          >
+            Cancel
+          </button>
         </motion.div>
-      ))}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="flex items-center gap-2 p-3 rounded-xl border-2 border-dashed border-zinc-200 text-zinc-400 hover:border-red-300 hover:text-red-500 transition-colors cursor-pointer"
-      >
-        <Plus className="w-5 h-5" />
-        <span className="text-sm font-medium">Add more channels...</span>
-      </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
+          {canAddMore ? (
+            <button
+              onClick={() => setShowSearch(true)}
+              className="w-full flex items-center gap-2 p-3 rounded-xl border-2 border-dashed border-zinc-200 text-zinc-400 hover:border-red-300 hover:text-red-500 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="text-sm font-medium">Add channels...</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">Max {maxChannels} channels</span>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Empty state hint */}
+      {selectedChannels.length === 0 && !showSearch && (
+        <p className="text-xs text-zinc-400 text-center mt-2">
+          Try searching for your favorite YouTube channels
+        </p>
+      )}
     </div>
   );
+}
+
+// Helper to format subscriber count
+function formatSubscribers(count: string | number): string {
+  const num = typeof count === "string" ? parseInt(count, 10) : count;
+  if (isNaN(num)) return "0";
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return String(num);
 }
 
 function CategoriesPreview() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,136 +11,68 @@ import {
   Tv,
   Check,
   ArrowRight,
-  ChevronRight,
   RotateCcw,
   Home,
   Filter,
   X,
+  Loader2,
+  AlertCircle,
+  Sparkles,
+  MousePointerClick,
 } from "lucide-react";
-import { fadeUp, staggerContainer, zenEase } from "./motion";
+import { fadeUp, staggerContainer } from "./motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useMarketingChannels, type MarketingChannel, type MarketingVideo } from "./MarketingChannelsContext";
+import { searchChannelsPublic, getLatestVideosForChannelsPublic } from "@/app/actions/marketing-youtube";
+import { formatDuration, formatViewCount } from "@/lib/youtube";
 
-// Real YouTube channels with actual data
-const demoChannels = [
-  { 
-    id: "1", 
-    name: "MKBHD", 
-    category: "Tech", 
-    avatar: "https://yt3.googleusercontent.com/lkH37D712tiyphLsBkT8CRLSLCLMOeSLKyxdY6mfSdWB7sJBxwfnYc_VNQBqQ6-2TkM3Nj5Hpg=s176-c-k-c0x00ffffff-no-rj",
-    subscribers: "18.9M",
-  },
-  { 
-    id: "2", 
-    name: "3Blue1Brown", 
-    category: "Education", 
-    avatar: "https://yt3.googleusercontent.com/ytc/AIdro_nFzgcTrxulXeYVmDXRAblMhvQ-MjI1aTXU3kqwQS5a=s176-c-k-c0x00ffffff-no-rj",
-    subscribers: "6.2M",
-  },
-  { 
-    id: "3", 
-    name: "Veritasium", 
-    category: "Science", 
-    avatar: "https://yt3.googleusercontent.com/ytc/AIdro_kED97yk3MKP6Abzc5u9pnNBWH8pKzYh-36EJNWBLpvhg=s176-c-k-c0x00ffffff-no-rj",
-    subscribers: "15.4M",
-  },
-  { 
-    id: "4", 
-    name: "Fireship", 
-    category: "Tech", 
-    avatar: "https://yt3.googleusercontent.com/ytc/AIdro_k_D9hKDXhJDNf1tSNJoXMTT8-OVx3jHfsmFnQOBA=s176-c-k-c0x00ffffff-no-rj",
-    subscribers: "3.1M",
-  },
-];
+// Helper to format relative time
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
 
-// Sample videos matching the channels
-const demoVideos = [
-  {
-    id: "1",
-    channelId: "1",
-    title: "The BEST Smartphones of 2024!",
-    channel: "MKBHD",
-    channelAvatar: demoChannels[0].avatar,
-    duration: "18:45",
-    thumbnail: "https://i.ytimg.com/vi/XuSz4YQYGEQ/maxresdefault.jpg",
-    views: "4.2M",
-    time: "2 days ago",
-  },
-  {
-    id: "2",
-    channelId: "2",
-    title: "But what is a neural network?",
-    channel: "3Blue1Brown",
-    channelAvatar: demoChannels[1].avatar,
-    duration: "19:13",
-    thumbnail: "https://i.ytimg.com/vi/aircAruvnKk/maxresdefault.jpg",
-    views: "18M",
-    time: "2 years ago",
-  },
-  {
-    id: "3",
-    channelId: "3",
-    title: "The Bizarre Behavior of Rotating Bodies",
-    channel: "Veritasium",
-    channelAvatar: demoChannels[2].avatar,
-    duration: "15:42",
-    thumbnail: "https://i.ytimg.com/vi/OcE7_nLX5W0/maxresdefault.jpg",
-    views: "12M",
-    time: "1 month ago",
-  },
-  {
-    id: "4",
-    channelId: "4",
-    title: "100 Seconds of Code - React",
-    channel: "Fireship",
-    channelAvatar: demoChannels[3].avatar,
-    duration: "2:27",
-    thumbnail: "https://i.ytimg.com/vi/Tn6-PIqc4UM/maxresdefault.jpg",
-    views: "2.1M",
-    time: "1 year ago",
-  },
-  {
-    id: "5",
-    channelId: "1",
-    title: "Galaxy S24 Ultra Review: 100X Better!",
-    channel: "MKBHD",
-    channelAvatar: demoChannels[0].avatar,
-    duration: "14:22",
-    thumbnail: "https://i.ytimg.com/vi/6xDAFWALQiY/maxresdefault.jpg",
-    views: "5.1M",
-    time: "1 week ago",
-  },
-  {
-    id: "6",
-    channelId: "2",
-    title: "Visualizing quaternions",
-    channel: "3Blue1Brown",
-    channelAvatar: demoChannels[1].avatar,
-    duration: "31:51",
-    thumbnail: "https://i.ytimg.com/vi/d4EgbgTm0Bg/maxresdefault.jpg",
-    views: "8.2M",
-    time: "4 years ago",
-  },
-];
+  if (diffYears > 0) return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
+  if (diffMonths > 0) return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
+  if (diffWeeks > 0) return `${diffWeeks} week${diffWeeks > 1 ? "s" : ""} ago`;
+  if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+  return "Just now";
+}
 
-// Mini dashboard component that mimics the real app
-function MiniDashboard({ 
-  addedChannels, 
-  onRemoveChannel 
-}: { 
-  addedChannels: string[];
-  onRemoveChannel: (id: string) => void;
+// Helper to format subscriber count
+function formatSubscribers(count: string | number): string {
+  const num = typeof count === "string" ? parseInt(count, 10) : count;
+  if (isNaN(num)) return "0";
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return String(num);
+}
+
+interface VideoWithChannel extends MarketingVideo {
+  channelTitle: string;
+  channelThumbnail: string;
+}
+
+// Mini dashboard component that shows real feed
+function MiniDashboard({
+  videos,
+  isLoading,
+}: {
+  videos: VideoWithChannel[];
+  isLoading: boolean;
 }) {
+  const { selectedChannels, removeChannel } = useMarketingChannels();
   const [activeTab, setActiveTab] = useState<"feed" | "channels">("feed");
   const shouldReduceMotion = useReducedMotion();
-
-  const filteredVideos = demoVideos.filter(video => 
-    addedChannels.includes(video.channelId)
-  );
-
-  const addedChannelData = demoChannels.filter(ch => 
-    addedChannels.includes(ch.id)
-  );
 
   return (
     <div className="h-full flex flex-col bg-white rounded-2xl overflow-hidden border border-zinc-200 shadow-xl">
@@ -164,8 +96,8 @@ function MiniDashboard({
           onClick={() => setActiveTab("feed")}
           className={cn(
             "flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5",
-            activeTab === "feed" 
-              ? "text-red-600 border-b-2 border-red-600 bg-red-50/50" 
+            activeTab === "feed"
+              ? "text-red-600 border-b-2 border-red-600 bg-red-50/50"
               : "text-zinc-500 hover:text-zinc-700"
           )}
         >
@@ -176,13 +108,13 @@ function MiniDashboard({
           onClick={() => setActiveTab("channels")}
           className={cn(
             "flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5",
-            activeTab === "channels" 
-              ? "text-red-600 border-b-2 border-red-600 bg-red-50/50" 
+            activeTab === "channels"
+              ? "text-red-600 border-b-2 border-red-600 bg-red-50/50"
               : "text-zinc-500 hover:text-zinc-700"
           )}
         >
           <Tv className="w-3.5 h-3.5" />
-          Channels ({addedChannels.length})
+          Channels ({selectedChannels.length})
         </button>
       </div>
 
@@ -198,18 +130,26 @@ function MiniDashboard({
               transition={{ duration: 0.2 }}
               className="p-3"
             >
-              {filteredVideos.length > 0 ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center h-48 text-center">
+                  <Loader2 className="w-8 h-8 text-red-500 animate-spin mb-3" />
+                  <p className="text-sm text-zinc-500">Loading videos...</p>
+                </div>
+              ) : videos.length > 0 ? (
                 <div className="space-y-3">
                   {/* Filter indicator */}
                   <div className="flex items-center gap-2 text-xs text-zinc-500">
                     <Filter className="w-3 h-3" />
-                    <span>Showing videos from {addedChannels.length} channel{addedChannels.length !== 1 ? "s" : ""}</span>
+                    <span>
+                      Showing videos from {selectedChannels.length} channel
+                      {selectedChannels.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
-                  
+
                   {/* Video list */}
-                  {filteredVideos.map((video, i) => (
+                  {videos.map((video, i) => (
                     <motion.div
-                      key={video.id}
+                      key={video.videoId}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
@@ -217,31 +157,46 @@ function MiniDashboard({
                     >
                       {/* Thumbnail */}
                       <div className="relative w-28 aspect-video rounded-lg overflow-hidden bg-zinc-100 flex-shrink-0">
-                        <img 
-                          src={video.thumbnail} 
+                        <img
+                          src={video.thumbnailUrl}
                           alt={video.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "https://via.placeholder.com/320x180?text=Video";
+                          }}
                         />
-                        <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 text-white text-[9px] rounded font-medium">
-                          {video.duration}
-                        </span>
+                        {video.duration && (
+                          <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 text-white text-[9px] rounded font-medium">
+                            {formatDuration(video.duration)}
+                          </span>
+                        )}
                       </div>
-                      
+
                       {/* Info */}
                       <div className="flex-1 min-w-0 py-0.5">
                         <h4 className="text-[11px] font-medium text-zinc-900 line-clamp-2 leading-tight mb-1 group-hover:text-red-600 transition-colors">
                           {video.title}
                         </h4>
                         <div className="flex items-center gap-1.5">
-                          <img 
-                            src={video.channelAvatar} 
-                            alt={video.channel}
+                          <img
+                            src={video.channelThumbnail}
+                            alt={video.channelTitle}
                             className="w-4 h-4 rounded-full"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                video.channelTitle
+                              )}&size=16&background=dc2626&color=fff`;
+                            }}
                           />
-                          <span className="text-[10px] text-zinc-500 truncate">{video.channel}</span>
+                          <span className="text-[10px] text-zinc-500 truncate">
+                            {video.channelTitle}
+                          </span>
                         </div>
                         <p className="text-[9px] text-zinc-400 mt-0.5">
-                          {video.views} • {video.time}
+                          {video.viewCount ? formatViewCount(video.viewCount) : ""}{" "}
+                          {video.viewCount && video.publishedAt ? "• " : ""}
+                          {video.publishedAt ? formatRelativeTime(video.publishedAt) : ""}
                         </p>
                       </div>
                     </motion.div>
@@ -253,7 +208,9 @@ function MiniDashboard({
                     <Tv className="w-6 h-6 text-zinc-400" />
                   </div>
                   <p className="text-sm text-zinc-500">No channels added yet</p>
-                  <p className="text-xs text-zinc-400 mt-1">Add channels to see your feed</p>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Search and add channels to see your feed
+                  </p>
                 </div>
               )}
             </motion.div>
@@ -266,27 +223,38 @@ function MiniDashboard({
               transition={{ duration: 0.2 }}
               className="p-3"
             >
-              {addedChannelData.length > 0 ? (
+              {selectedChannels.length > 0 ? (
                 <div className="space-y-2">
-                  {addedChannelData.map((channel, i) => (
+                  {selectedChannels.map((channel, i) => (
                     <motion.div
-                      key={channel.id}
+                      key={channel.channelId}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
                       className="flex items-center gap-3 p-2.5 rounded-xl bg-teal-50/50 border border-teal-100"
                     >
-                      <img 
-                        src={channel.avatar} 
-                        alt={channel.name}
+                      <img
+                        src={channel.thumbnailUrl}
+                        alt={channel.title}
                         className="w-9 h-9 rounded-full"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            channel.title
+                          )}&background=0d9488&color=fff`;
+                        }}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-900">{channel.name}</div>
-                        <div className="text-[10px] text-zinc-500">{channel.subscribers} subscribers</div>
+                        <div className="text-sm font-medium text-zinc-900">
+                          {channel.title}
+                        </div>
+                        {channel.subscriberCount && (
+                          <div className="text-[10px] text-zinc-500">
+                            {formatSubscribers(channel.subscriberCount)} subscribers
+                          </div>
+                        )}
                       </div>
                       <button
-                        onClick={() => onRemoveChannel(channel.id)}
+                        onClick={() => removeChannel(channel.channelId)}
                         className="w-6 h-6 rounded-full bg-zinc-100 hover:bg-red-100 flex items-center justify-center transition-colors group"
                       >
                         <X className="w-3 h-3 text-zinc-400 group-hover:text-red-500" />
@@ -309,7 +277,7 @@ function MiniDashboard({
       </div>
 
       {/* Bottom status */}
-      {addedChannels.length > 0 && (
+      {selectedChannels.length > 0 && (
         <div className="px-4 py-2.5 border-t border-zinc-100 bg-zinc-50/50">
           <div className="flex items-center justify-center gap-2 text-[10px] text-teal-600">
             <Check className="w-3 h-3" />
@@ -322,24 +290,117 @@ function MiniDashboard({
 }
 
 export function DemoPortal() {
-  const [addedChannels, setAddedChannels] = useState<string[]>([]);
+  const {
+    selectedChannels,
+    addChannel,
+    removeChannel,
+    isSelected,
+    canAddMore,
+    maxChannels,
+    clearAll,
+  } = useMarketingChannels();
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<MarketingChannel[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [videos, setVideos] = useState<VideoWithChannel[]>([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
-  const handleAddChannel = useCallback((id: string) => {
-    setAddedChannels((prev) =>
-      prev.includes(id) ? prev : [...prev, id]
-    );
-  }, []);
+  // Debounced search
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
 
-  const handleRemoveChannel = useCallback((id: string) => {
-    setAddedChannels((prev) => prev.filter((c) => c !== id));
-  }, []);
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const result = await searchChannelsPublic(searchQuery);
+        if (result.channels) {
+          setSearchResults(
+            result.channels.map((ch) => ({
+              channelId: ch.channelId,
+              title: ch.title,
+              thumbnailUrl: ch.thumbnailUrl,
+              subscriberCount: ch.subscriberCount,
+              customUrl: ch.customUrl,
+            }))
+          );
+        }
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
 
-  const filteredChannels = demoChannels.filter(channel =>
-    channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    channel.category.toLowerCase().includes(searchQuery.toLowerCase())
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch videos when selected channels change
+  useEffect(() => {
+    if (selectedChannels.length === 0) {
+      setVideos([]);
+      return;
+    }
+
+    const fetchVideos = async () => {
+      setIsLoadingVideos(true);
+      try {
+        const channelIds = selectedChannels.map((c) => c.channelId);
+        const result = await getLatestVideosForChannelsPublic(channelIds, 3);
+
+        if (result.videosByChannel) {
+          // Flatten and enrich videos with channel info
+          const allVideos: VideoWithChannel[] = [];
+
+          for (const channel of selectedChannels) {
+            const channelVideos = result.videosByChannel[channel.channelId] || [];
+            for (const video of channelVideos) {
+              allVideos.push({
+                videoId: video.videoId,
+                channelId: video.channelId,
+                title: video.title,
+                thumbnailUrl: video.thumbnailUrl,
+                thumbnailHighUrl: video.thumbnailHighUrl,
+                publishedAt: video.publishedAt,
+                duration: video.duration,
+                viewCount: video.viewCount,
+                channelTitle: channel.title,
+                channelThumbnail: channel.thumbnailUrl,
+              });
+            }
+          }
+
+          // Sort by published date (newest first)
+          allVideos.sort(
+            (a, b) =>
+              new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          );
+
+          setVideos(allVideos);
+        }
+      } catch {
+        setVideos([]);
+      } finally {
+        setIsLoadingVideos(false);
+      }
+    };
+
+    fetchVideos();
+  }, [selectedChannels]);
+
+  const handleAddChannel = useCallback(
+    (channel: MarketingChannel) => {
+      addChannel(channel);
+    },
+    [addChannel]
   );
+
+  // Filter out already selected channels from search results
+  const filteredResults = searchResults.filter((ch) => !isSelected(ch.channelId));
 
   return (
     <section className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-white to-zinc-50">
@@ -349,23 +410,33 @@ export function DemoPortal() {
         <motion.div
           className="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(220, 38, 38, 0.05) 0%, transparent 60%)",
+            background:
+              "radial-gradient(circle, rgba(220, 38, 38, 0.05) 0%, transparent 60%)",
             filter: "blur(80px)",
           }}
-          animate={shouldReduceMotion ? {} : {
-            scale: [1, 1.1, 1],
-          }}
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  scale: [1, 1.1, 1],
+                }
+          }
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(13, 148, 136, 0.05) 0%, transparent 60%)",
+            background:
+              "radial-gradient(circle, rgba(13, 148, 136, 0.05) 0%, transparent 60%)",
             filter: "blur(80px)",
           }}
-          animate={shouldReduceMotion ? {} : {
-            scale: [1, 1.15, 1],
-          }}
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  scale: [1, 1.15, 1],
+                }
+          }
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
         />
       </div>
@@ -387,7 +458,8 @@ export function DemoPortal() {
               Try it yourself.
             </h2>
             <p className="text-zinc-600 text-lg max-w-xl mx-auto">
-              Add channels on the left, see your curated feed on the right. No sign-up required.
+              Search and add channels on the left, see your curated feed on the right.
+              No sign-up required.
             </p>
           </motion.div>
 
@@ -399,76 +471,271 @@ export function DemoPortal() {
                   <h3 className="font-semibold text-zinc-900 flex items-center gap-2 mb-3">
                     <Plus className="w-5 h-5 text-red-600" />
                     Add Channels
+                    {selectedChannels.length === 0 && (
+                      <motion.span
+                        className="ml-auto text-xs font-normal text-red-500 flex items-center gap-1"
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        Start here
+                      </motion.span>
+                    )}
                   </h3>
-                  {/* Search */}
+                  {/* Search with animated border when empty */}
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search channels..."
-                      className="w-full h-10 pl-10 pr-4 rounded-xl bg-white border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all"
-                    />
+                    {/* Pulsing border effect when no channels */}
+                    {selectedChannels.length === 0 && !searchQuery && (
+                      <motion.div
+                        className="absolute -inset-1 rounded-xl bg-gradient-to-r from-red-500 via-orange-500 to-red-500 opacity-50"
+                        animate={{
+                          opacity: [0.3, 0.6, 0.3],
+                        }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        style={{ filter: "blur(4px)" }}
+                      />
+                    )}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 z-10" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search YouTube channels..."
+                        className={cn(
+                          "w-full h-10 pl-10 pr-10 rounded-xl bg-white border text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all relative z-10",
+                          selectedChannels.length === 0 && !searchQuery
+                            ? "border-red-300 shadow-sm"
+                            : "border-zinc-200"
+                        )}
+                      />
+                      {isSearching && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 animate-spin z-10" />
+                      )}
+                      {!isSearching && searchQuery && (
+                        <button
+                          onClick={() => {
+                            setSearchQuery("");
+                            setSearchResults([]);
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 z-10"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
-                  {filteredChannels.map((channel, i) => {
-                    const isAdded = addedChannels.includes(channel.id);
-                    return (
+                  {/* Search results */}
+                  {filteredResults.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs text-zinc-500 font-medium">Search results</p>
+                      {filteredResults.slice(0, 5).map((channel, i) => (
+                        <motion.div
+                          key={channel.channelId}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                            "bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-sm",
+                            !canAddMore && "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={() => canAddMore && handleAddChannel(channel)}
+                        >
+                          <img
+                            src={channel.thumbnailUrl}
+                            alt={channel.title}
+                            className="w-11 h-11 rounded-full"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                channel.title
+                              )}&background=dc2626&color=fff`;
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-zinc-900">
+                              {channel.title}
+                            </div>
+                            {channel.subscriberCount && (
+                              <div className="text-xs text-zinc-500">
+                                {formatSubscribers(channel.subscriberCount)} subscribers
+                              </div>
+                            )}
+                          </div>
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                              "bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-500"
+                            )}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* No results message */}
+                  {searchQuery.length >= 2 &&
+                    !isSearching &&
+                    searchResults.length === 0 && (
+                      <div className="text-center py-8 text-zinc-500">
+                        <p className="text-sm">No channels found</p>
+                        <p className="text-xs mt-1">Try a different search term</p>
+                      </div>
+                    )}
+
+                  {/* Selected channels */}
+                  {selectedChannels.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-zinc-500 font-medium">
+                        Selected channels ({selectedChannels.length}/{maxChannels})
+                      </p>
+                      {selectedChannels.map((channel, i) => (
+                        <motion.div
+                          key={channel.channelId}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-teal-50 border-2 border-teal-300 shadow-sm"
+                        >
+                          <img
+                            src={channel.thumbnailUrl}
+                            alt={channel.title}
+                            className="w-11 h-11 rounded-full"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                channel.title
+                              )}&background=0d9488&color=fff`;
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-zinc-900">
+                              {channel.title}
+                            </div>
+                            {channel.subscriberCount && (
+                              <div className="text-xs text-zinc-500">
+                                {formatSubscribers(channel.subscriberCount)} subscribers
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeChannel(channel.channelId)}
+                            className="w-8 h-8 rounded-full bg-teal-500 text-white hover:bg-red-500 flex items-center justify-center transition-all"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Empty state with visual prompt */}
+                  {selectedChannels.length === 0 && searchResults.length === 0 && (
+                    <div className="text-center py-6">
+                      {/* Animated prompt */}
                       <motion.div
-                        key={channel.id}
+                        className="relative mb-4"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: shouldReduceMotion ? 0 : i * 0.05 }}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
-                          isAdded
-                            ? "bg-teal-50 border-2 border-teal-300 shadow-sm"
-                            : "bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
-                        )}
-                        onClick={() => isAdded ? handleRemoveChannel(channel.id) : handleAddChannel(channel.id)}
                       >
-                        <img 
-                          src={channel.avatar} 
-                          alt={channel.name}
-                          className="w-11 h-11 rounded-full"
+                        <motion.div
+                          className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto shadow-lg shadow-red-500/30"
+                          animate={{
+                            scale: [1, 1.05, 1],
+                          }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          <Search className="w-7 h-7 text-white" />
+                        </motion.div>
+                        {/* Pulsing ring */}
+                        <motion.div
+                          className="absolute inset-0 w-16 h-16 rounded-2xl border-2 border-red-400 mx-auto"
+                          animate={{
+                            scale: [1, 1.3, 1.3],
+                            opacity: [0.8, 0, 0],
+                          }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                          style={{ left: '50%', transform: 'translateX(-50%)' }}
                         />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-zinc-900">{channel.name}</div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-zinc-500">{channel.subscribers}</span>
-                            <span className="text-zinc-300">•</span>
-                            <span className="text-xs text-zinc-400">{channel.category}</span>
-                          </div>
-                        </div>
-                        <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                          isAdded 
-                            ? "bg-teal-500 text-white" 
-                            : "bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-500"
-                        )}>
-                          {isAdded ? (
-                            <Check className="w-4 h-4" />
-                          ) : (
-                            <Plus className="w-4 h-4" />
-                          )}
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <p className="text-sm font-medium text-zinc-700 mb-1">
+                          Start by searching for channels
+                        </p>
+                        <p className="text-xs text-zinc-400 mb-4">
+                          Add up to {maxChannels} of your favorite YouTube channels
+                        </p>
+                      </motion.div>
+
+                      {/* Try these suggestions */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="space-y-2"
+                      >
+                        <p className="text-xs text-zinc-400 flex items-center justify-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          Try searching for:
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {["MKBHD", "Fireship", "Veritasium"].map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              onClick={() => setSearchQuery(suggestion)}
+                              className="px-3 py-1.5 rounded-full bg-zinc-100 hover:bg-red-50 border border-zinc-200 hover:border-red-200 text-xs font-medium text-zinc-600 hover:text-red-600 transition-all flex items-center gap-1.5"
+                            >
+                              <MousePointerClick className="w-3 h-3" />
+                              {suggestion}
+                            </button>
+                          ))}
                         </div>
                       </motion.div>
-                    );
-                  })}
+
+                      {/* Arrow pointing to search */}
+                      <motion.div
+                        className="mt-4 flex justify-center"
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <div className="flex items-center gap-1 text-xs text-red-500 font-medium">
+                          <ArrowRight className="w-4 h-4 rotate-[-90deg]" />
+                          <span>Use the search box above</span>
+                        </div>
+                      </motion.div>
+                    </div>
+                  )}
+
+                  {/* Max channels warning */}
+                  {!canAddMore && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 mt-4">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        Max {maxChannels} channels reached
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status bar */}
                 <div className="p-4 border-t border-zinc-100 bg-zinc-50/50">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-zinc-500">
-                      {addedChannels.length} channel{addedChannels.length !== 1 ? "s" : ""} selected
+                      {selectedChannels.length} channel
+                      {selectedChannels.length !== 1 ? "s" : ""} selected
                     </span>
-                    {addedChannels.length > 0 && (
+                    {selectedChannels.length > 0 && (
                       <button
-                        onClick={() => setAddedChannels([])}
+                        onClick={clearAll}
                         className="text-zinc-400 hover:text-red-500 flex items-center gap-1 text-xs transition-colors"
                       >
                         <RotateCcw className="w-3 h-3" />
@@ -481,10 +748,7 @@ export function DemoPortal() {
 
               {/* Right: Mini dashboard preview */}
               <div className="h-[520px]">
-                <MiniDashboard 
-                  addedChannels={addedChannels} 
-                  onRemoveChannel={handleRemoveChannel}
-                />
+                <MiniDashboard videos={videos} isLoading={isLoadingVideos} />
               </div>
             </div>
           </motion.div>

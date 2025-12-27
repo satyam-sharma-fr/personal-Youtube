@@ -427,3 +427,205 @@ export async function getContinueWatching(limit = 10) {
   return { success: true, videos: combined };
 }
 
+// ============================================
+// Watch Later Actions
+// ============================================
+
+export async function getWatchLater(limit = 50) {
+  const supabase = await createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "You must be logged in" };
+  }
+
+  const { data: watchLater, error } = await supabase
+    .from("user_watch_later")
+    .select("video_id, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Get watch later error:", error);
+    return { error: "Failed to load watch later" };
+  }
+
+  if (!watchLater?.length) {
+    return { success: true, videos: [] };
+  }
+
+  // Get video details
+  const videoIds = watchLater.map((w) => w.video_id);
+  const { data: videos } = await supabase
+    .from("youtube_videos")
+    .select("video_id, title, thumbnail_url, thumbnail_high_url, duration, channel_id, published_at, view_count")
+    .in("video_id", videoIds);
+
+  // Get channel info
+  const channelIds = [...new Set(videos?.map((v) => v.channel_id) || [])];
+  const { data: channels } = await supabase
+    .from("youtube_channels")
+    .select("channel_id, title, thumbnail_url")
+    .in("channel_id", channelIds);
+
+  const videoMap = new Map(videos?.map((v) => [v.video_id, v]) || []);
+  const channelMap = new Map(channels?.map((c) => [c.channel_id, c]) || []);
+
+  // Combine the data, preserving watch later order
+  const combined = watchLater.map((w) => {
+    const video = videoMap.get(w.video_id);
+    const channel = video ? channelMap.get(video.channel_id) : null;
+    return {
+      video_id: w.video_id,
+      added_at: w.created_at,
+      video: video ? {
+        ...video,
+        youtube_channels: channel || null,
+      } : null,
+    };
+  }).filter((w) => w.video !== null);
+
+  return { success: true, videos: combined };
+}
+
+export async function addToWatchLater(videoId: string) {
+  const supabase = await createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "You must be logged in" };
+  }
+
+  const { error } = await supabase
+    .from("user_watch_later")
+    .insert({
+      user_id: user.id,
+      video_id: videoId,
+    });
+
+  if (error) {
+    // Check if it's a unique constraint violation (already added)
+    if (error.code === "23505") {
+      return { success: true, alreadyExists: true };
+    }
+    console.error("Add to watch later error:", error);
+    return { error: "Failed to add to watch later" };
+  }
+
+  revalidatePath("/watch-later");
+  revalidatePath("/dashboard");
+
+  return { success: true };
+}
+
+export async function removeFromWatchLater(videoId: string) {
+  const supabase = await createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "You must be logged in" };
+  }
+
+  const { error } = await supabase
+    .from("user_watch_later")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("video_id", videoId);
+
+  if (error) {
+    console.error("Remove from watch later error:", error);
+    return { error: "Failed to remove from watch later" };
+  }
+
+  revalidatePath("/watch-later");
+  revalidatePath("/dashboard");
+
+  return { success: true };
+}
+
+export async function getWatchLaterStatus(videoIds: string[]) {
+  const supabase = await createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "You must be logged in" };
+  }
+
+  if (!videoIds.length) {
+    return { success: true, watchLaterMap: {} };
+  }
+
+  const { data, error } = await supabase
+    .from("user_watch_later")
+    .select("video_id")
+    .eq("user_id", user.id)
+    .in("video_id", videoIds);
+
+  if (error) {
+    console.error("Get watch later status error:", error);
+    return { error: "Failed to get watch later status" };
+  }
+
+  // Create a map of video_id to boolean
+  const watchLaterMap: Record<string, boolean> = {};
+  videoIds.forEach((id) => {
+    watchLaterMap[id] = false;
+  });
+  data?.forEach((item) => {
+    watchLaterMap[item.video_id] = true;
+  });
+
+  return { success: true, watchLaterMap };
+}
+
+export async function toggleWatchLater(videoId: string) {
+  const supabase = await createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "You must be logged in" };
+  }
+
+  // Check if already in watch later
+  const { data: existing } = await supabase
+    .from("user_watch_later")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("video_id", videoId)
+    .single();
+
+  if (existing) {
+    // Remove from watch later
+    const { error } = await supabase
+      .from("user_watch_later")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("video_id", videoId);
+
+    if (error) {
+      console.error("Toggle watch later (remove) error:", error);
+      return { error: "Failed to update watch later" };
+    }
+
+    revalidatePath("/watch-later");
+    return { success: true, inWatchLater: false };
+  } else {
+    // Add to watch later
+    const { error } = await supabase
+      .from("user_watch_later")
+      .insert({
+        user_id: user.id,
+        video_id: videoId,
+      });
+
+    if (error) {
+      console.error("Toggle watch later (add) error:", error);
+      return { error: "Failed to update watch later" };
+    }
+
+    revalidatePath("/watch-later");
+    return { success: true, inWatchLater: true };
+  }
+}
+

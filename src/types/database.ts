@@ -162,16 +162,41 @@ export type Database = {
           },
         ]
       }
+      dodo_webhook_events: {
+        Row: {
+          webhook_id: string
+          received_at: string
+          event_type: string
+          payload: Json
+          processed: boolean
+        }
+        Insert: {
+          webhook_id: string
+          received_at?: string
+          event_type: string
+          payload: Json
+          processed?: boolean
+        }
+        Update: {
+          webhook_id?: string
+          received_at?: string
+          event_type?: string
+          payload?: Json
+          processed?: boolean
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string | null
           daily_watch_limit_minutes: number | null
+          dodo_customer_id: string | null
+          dodo_product_id: string | null
+          dodo_subscription_id: string | null
           email: string | null
           full_name: string | null
           id: string
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
           time_zone: string | null
@@ -182,11 +207,12 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           daily_watch_limit_minutes?: number | null
+          dodo_customer_id?: string | null
+          dodo_product_id?: string | null
+          dodo_subscription_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           time_zone?: string | null
@@ -197,11 +223,12 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           daily_watch_limit_minutes?: number | null
+          dodo_customer_id?: string | null
+          dodo_product_id?: string | null
+          dodo_subscription_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           time_zone?: string | null
@@ -259,6 +286,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_video_state_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_watch_later: {
+        Row: {
+          id: string
+          user_id: string
+          video_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          video_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          video_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_watch_later_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -535,9 +591,11 @@ export const Constants = {
 
 // Type aliases for convenience
 export type ChannelCategory = Tables<"channel_categories">
+export type DodoWebhookEvent = Tables<"dodo_webhook_events">
 export type Profile = Tables<"profiles">
 export type YouTubeChannel = Tables<"youtube_channels">
 export type YouTubeVideo = Tables<"youtube_videos">
 export type ChannelSubscription = Tables<"channel_subscriptions">
 export type UserVideoState = Tables<"user_video_state">
+export type UserWatchLater = Tables<"user_watch_later">
 export type DailyWatchSession = Tables<"daily_watch_sessions">

@@ -156,7 +156,7 @@ function ContinueWatchingSection() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="w-full max-w-5xl mb-8"
+        className="w-full max-w-5xl mt-12"
       >
         <div className="flex items-center gap-2 mb-4">
           <PlayCircle className="w-5 h-5 text-primary" />
@@ -177,8 +177,8 @@ function ContinueWatchingSection() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.5 }}
-      className="w-full max-w-5xl mb-8"
+      transition={{ delay: 0.8, duration: 0.5 }}
+      className="w-full max-w-5xl mt-12"
     >
       <div className="flex items-center justify-between mb-4 px-2">
         <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ function ContinueWatchingSection() {
               key={video.video_id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 + index * 0.1 }}
+              transition={{ delay: 0.9 + index * 0.1 }}
             >
               <ContinueWatchingCard item={video} />
             </motion.div>
@@ -258,9 +258,6 @@ export function HomeDashboard() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/5 rounded-full blur-3xl" />
       </div>
-
-      {/* Continue Watching Section */}
-      <ContinueWatchingSection />
 
       {/* Header Section */}
       <motion.div
@@ -411,6 +408,9 @@ export function HomeDashboard() {
           </Button>
         </Link>
       </motion.div>
+
+      {/* Continue Watching Section */}
+      <ContinueWatchingSection />
     </div>
   );
 }

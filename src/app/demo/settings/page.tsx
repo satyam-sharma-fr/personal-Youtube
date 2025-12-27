@@ -4,18 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Check, Crown, CreditCard, Timer, Clock, ArrowRight, Eye, Lock } from "lucide-react";
+import { TIERS, TierID } from "@/lib/billing";
 
-const tiers = {
+// Simplified tier display for demo page (uses shared pricing)
+const tiers: Record<TierID, { name: string; price: string; channels: number; features: string[] }> = {
   free: {
-    name: "Free",
-    price: "$0",
-    channels: 5,
+    name: TIERS.free.name,
+    price: TIERS.free.price,
+    channels: TIERS.free.channels,
     features: ["Up to 5 channels", "Basic feed", "Watch history (7 days)"],
   },
   pro: {
-    name: "Pro",
-    price: "$9/month",
-    channels: 25,
+    name: TIERS.pro.name,
+    price: TIERS.pro.price,
+    channels: TIERS.pro.channels,
     features: [
       "Up to 25 channels",
       "Channel categories",
@@ -25,9 +27,9 @@ const tiers = {
     ],
   },
   unlimited: {
-    name: "Unlimited",
-    price: "$19/month",
-    channels: Infinity,
+    name: TIERS.unlimited.name,
+    price: TIERS.unlimited.price,
+    channels: TIERS.unlimited.channels,
     features: [
       "Unlimited channels",
       "Everything in Pro",

@@ -1,56 +1,71 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Tv, Clock, Sparkles, Check } from "lucide-react";
+import { ArrowRight, Play, Tv, Clock, Check, Grid3X3 } from "lucide-react";
 import { staggerContainer, fadeUp, scaleIn } from "./motion";
 
-// Popular YouTube channels with real thumbnails
-const HERO_CHANNELS = [
+// Videos from provided YouTube links for hero animation
+// Video IDs extracted from the user-provided URLs:
+// 1. https://youtu.be/9RV5gttT6rA
+// 2. https://youtu.be/v-sCZN3FbR0
+// 3. https://youtu.be/bxGE_LXPyAU
+// 4. https://youtu.be/9NjA41wShTI
+const HERO_VIDEOS = [
   {
     id: 1,
-    thumbnail: "https://i.ytimg.com/vi/XuSz4YQYGEQ/maxresdefault.jpg",
-    title: "The BEST Smartphones of 2024!",
-    channel: "MKBHD",
-    channelAvatar: "https://yt3.googleusercontent.com/lkH37D712tiyphLsBkT8CRLSLCLMOeSLKyxdY6mfSdWB7sJBxwfnYc_VNQBqQ6-2TkM3Nj5Hpg=s176-c-k-c0x00ffffff-no-rj",
-    views: "4.2M views",
-    time: "2 days ago",
-    duration: "18:45",
+    thumbnail: "https://i.ytimg.com/vi/9RV5gttT6rA/hqdefault.jpg",
+    title: "Building Modern Web Apps",
+    channel: "Fireship",
+    channelInitials: "FS",
+    category: "Tech",
+    views: "1.2M views",
+    time: "1 week ago",
+    duration: "12:34",
   },
   {
     id: 2,
-    thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
-    title: "Framework Laptop 16 Review",
-    channel: "Linus Tech Tips",
-    channelAvatar: "https://yt3.googleusercontent.com/Vy6KL7EM_apxPSxF0pPy5w_c87YDTOlBQo3MADZ0ynNu8bWh3UjdgGTc1cTN2VgRRUgBzNVR5Q=s176-c-k-c0x00ffffff-no-rj",
-    views: "2.8M views",
-    time: "5 days ago",
-    duration: "21:33",
+    thumbnail: "https://i.ytimg.com/vi/v-sCZN3FbR0/hqdefault.jpg",
+    title: "The Science of Learning",
+    channel: "Veritasium",
+    channelInitials: "VE",
+    category: "Science",
+    views: "890K views",
+    time: "3 days ago",
+    duration: "8:45",
   },
   {
     id: 3,
-    thumbnail: "https://i.ytimg.com/vi/OcE7_nLX5W0/maxresdefault.jpg",
-    title: "The Bizarre Behavior of Rotating Bodies",
-    channel: "Veritasium",
-    channelAvatar: "https://yt3.googleusercontent.com/ytc/AIdro_kED97yk3MKP6Abzc5u9pnNBWH8pKzYh-36EJNWBLpvhg=s176-c-k-c0x00ffffff-no-rj",
-    views: "12M views",
-    time: "1 month ago",
-    duration: "15:42",
+    thumbnail: "https://i.ytimg.com/vi/bxGE_LXPyAU/hqdefault.jpg",
+    title: "Deep Dive into AI",
+    channel: "3Blue1Brown",
+    channelInitials: "3B",
+    category: "Tech",
+    views: "2.1M views",
+    time: "2 weeks ago",
+    duration: "15:22",
   },
   {
     id: 4,
-    thumbnail: "https://i.ytimg.com/vi/aircAruvnKk/maxresdefault.jpg",
-    title: "But what is a neural network?",
-    channel: "3Blue1Brown",
-    channelAvatar: "https://yt3.googleusercontent.com/ytc/AIdro_nFzgcTrxulXeYVmDXRAblMhvQ-MjI1aTXU3kqwQS5a=s176-c-k-c0x00ffffff-no-rj",
-    views: "18M views",
-    time: "2 years ago",
-    duration: "19:13",
+    thumbnail: "https://i.ytimg.com/vi/9NjA41wShTI/hqdefault.jpg",
+    title: "Creative Coding Tutorial",
+    channel: "The Coding Train",
+    channelInitials: "CT",
+    category: "Learning",
+    views: "560K views",
+    time: "5 days ago",
+    duration: "10:18",
   },
 ];
+
+// Category colors
+const categoryColors: Record<string, { bg: string; text: string }> = {
+  Tech: { bg: "bg-violet-500/20", text: "text-violet-400" },
+  Science: { bg: "bg-blue-500/20", text: "text-blue-400" },
+  Learning: { bg: "bg-teal-500/20", text: "text-teal-400" },
+};
 
 // Modern FocusTube Logo
 function FocusTubeLogo({ className = "", size = "default" }: { className?: string; size?: "small" | "default" | "large" }) {
@@ -80,7 +95,7 @@ function DeviceMockup() {
     <div className="device-frame">
       <div className="device-screen aspect-[4/3] p-4">
         {/* App header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
               <Play className="w-3 h-3 text-white fill-white ml-0.5" />
@@ -95,55 +110,79 @@ function DeviceMockup() {
           </div>
         </div>
 
+        {/* Category filter bar */}
+        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1">
+          <div className="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 flex items-center gap-1.5 flex-shrink-0">
+            <Grid3X3 className="w-3 h-3 text-white/70" />
+            <span className="text-white/80 text-[10px] font-medium">All</span>
+          </div>
+          <div className="px-2.5 py-1 rounded-full bg-violet-500/20 border border-violet-500/30 flex-shrink-0">
+            <span className="text-violet-400 text-[10px] font-medium">Tech</span>
+          </div>
+          <div className="px-2.5 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 flex-shrink-0">
+            <span className="text-blue-400 text-[10px] font-medium">Science</span>
+          </div>
+          <div className="px-2.5 py-1 rounded-full bg-teal-500/20 border border-teal-500/30 flex-shrink-0">
+            <span className="text-teal-400 text-[10px] font-medium">Learning</span>
+          </div>
+        </div>
+
         {/* Video grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {HERO_CHANNELS.map((video, i) => (
-            <motion.div
-              key={video.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.1, duration: 0.4 }}
-              className="group cursor-pointer"
-            >
-              {/* Thumbnail */}
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-800 mb-2">
-                <img
-                  src={video.thumbnail}
-                  alt={video.title}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                {/* Duration badge */}
-                <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 text-white text-[10px] font-medium">
-                  {video.duration}
+        <div className="grid grid-cols-2 gap-2.5">
+          {HERO_VIDEOS.map((video, i) => {
+            const catColor = categoryColors[video.category] || { bg: "bg-zinc-500/20", text: "text-zinc-400" };
+            return (
+              <motion.div
+                key={video.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1, duration: 0.4 }}
+                className="group cursor-pointer"
+              >
+                {/* Thumbnail */}
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-800 mb-1.5">
+                  <img
+                    src={video.thumbnail}
+                    alt={video.title}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  {/* Gradient overlay for broken images */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-700 to-zinc-800 -z-10" />
+                  {/* Duration badge */}
+                  <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-white text-[9px] font-medium">
+                    {video.duration}
+                  </div>
+                  {/* Category badge */}
+                  <div className={`absolute top-1 left-1 px-1.5 py-0.5 rounded ${catColor.bg}`}>
+                    <span className={`${catColor.text} text-[8px] font-medium`}>{video.category}</span>
+                  </div>
+                  {/* Play overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-red-600/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                    </div>
+                  </div>
                 </div>
-                {/* Play overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <motion.div 
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    whileHover={{ scale: 1, opacity: 1 }}
-                    className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Play className="w-5 h-5 text-white fill-white ml-0.5" />
-                  </motion.div>
+                
+                {/* Video info */}
+                <div className="flex gap-1.5">
+                  {/* Channel avatar with initials fallback */}
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-[8px] font-bold">{video.channelInitials}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-white/90 text-[10px] font-medium line-clamp-2 leading-tight mb-0.5">
+                      {video.title}
+                    </h4>
+                    <p className="text-white/50 text-[9px]">{video.channel}</p>
+                  </div>
                 </div>
-              </div>
-              
-              {/* Video info */}
-              <div className="flex gap-2">
-                <img 
-                  src={video.channelAvatar} 
-                  alt={video.channel}
-                  className="w-6 h-6 rounded-full flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-white/90 text-[11px] font-medium line-clamp-2 leading-tight mb-0.5">
-                    {video.title}
-                  </h4>
-                  <p className="text-white/50 text-[10px]">{video.channel}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </div>

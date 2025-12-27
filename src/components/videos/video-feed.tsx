@@ -25,6 +25,7 @@ type Video = {
   watched: boolean;
   progress_seconds: number;
   completed: boolean;
+  inWatchLater?: boolean;
   youtube_channels: {
     title: string;
     thumbnail_url: string | null;

@@ -18,3 +18,7 @@ export { BeforeAfterRefraction } from "./BeforeAfterRefraction";
 export { PrinciplesPrismCards } from "./PrinciplesPrismCards";
 export { PricingTiers } from "./PricingTiers";
 
+// Marketing channel context for realtime search
+export { MarketingChannelsProvider, useMarketingChannels } from "./MarketingChannelsContext";
+export type { MarketingChannel, MarketingVideo } from "./MarketingChannelsContext";
+

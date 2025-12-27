@@ -12,6 +12,7 @@ import {
   WaitlistForm,
   FAQ,
   Footer,
+  MarketingChannelsProvider,
 } from "@/components/marketing";
 
 export default function LandingPage() {
@@ -27,9 +28,12 @@ export default function LandingPage() {
       <Header />
       <main>
         <HeroGlass />
-        <DemoPortal />
-        <FeatureRunway />
-        <BeforeAfterRefraction />
+        {/* Wrap sections that share channel selection state */}
+        <MarketingChannelsProvider>
+          <DemoPortal />
+          <FeatureRunway />
+          <BeforeAfterRefraction />
+        </MarketingChannelsProvider>
         <PrinciplesPrismCards />
         <PricingTiers />
         <SocialProof />

@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
-import { Eye, EyeOff, Check, Clock, Loader2 } from "lucide-react";
-import { markVideoWatched } from "@/app/actions/videos";
+import { Eye, EyeOff, Check, Clock, Loader2, ListPlus, ListMinus } from "lucide-react";
+import { markVideoWatched, toggleWatchLater } from "@/app/actions/videos";
 import { formatDuration, formatViewCount } from "@/lib/youtube";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ interface VideoCardProps {
     watched: boolean;
     progress_seconds: number;
     completed: boolean;
+    inWatchLater?: boolean;
     youtube_channels: {
       title: string;
       thumbnail_url: string | null;
@@ -48,6 +49,8 @@ interface VideoCardProps {
 export function VideoCard({ video, index }: VideoCardProps) {
   const [isWatched, setIsWatched] = useState(video.watched);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isInWatchLater, setIsInWatchLater] = useState(video.inWatchLater ?? false);
+  const [isWatchLaterUpdating, setIsWatchLaterUpdating] = useState(false);
 
   const handleToggleWatched = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,6 +71,30 @@ export function VideoCard({ video, index }: VideoCardProps) {
       toast.error("Failed to update video");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleToggleWatchLater = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsWatchLaterUpdating(true);
+    const wasInWatchLater = isInWatchLater;
+    setIsInWatchLater(!wasInWatchLater);
+
+    try {
+      const result = await toggleWatchLater(video.video_id);
+      if (result.error) {
+        setIsInWatchLater(wasInWatchLater);
+        toast.error(result.error);
+      } else {
+        toast.success(result.inWatchLater ? "Added to Watch Later" : "Removed from Watch Later");
+      }
+    } catch {
+      setIsInWatchLater(wasInWatchLater);
+      toast.error("Failed to update Watch Later");
+    } finally {
+      setIsWatchLaterUpdating(false);
     }
   };
 
@@ -124,31 +151,63 @@ export function VideoCard({ video, index }: VideoCardProps) {
               </div>
             </div>
 
-            {/* Watch toggle button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 hover:bg-background"
-                    onClick={handleToggleWatched}
-                    disabled={isUpdating}
-                  >
-                    {isUpdating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isWatched ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isWatched ? "Mark as unwatched" : "Mark as watched"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Action buttons */}
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Watch Later toggle button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className={cn(
+                        "h-8 w-8 bg-background/90 hover:bg-background",
+                        isInWatchLater && "text-primary"
+                      )}
+                      onClick={handleToggleWatchLater}
+                      disabled={isWatchLaterUpdating}
+                    >
+                      {isWatchLaterUpdating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isInWatchLater ? (
+                        <ListMinus className="h-4 w-4" />
+                      ) : (
+                        <ListPlus className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isInWatchLater ? "Remove from Watch Later" : "Add to Watch Later"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Watch toggle button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 bg-background/90 hover:bg-background"
+                      onClick={handleToggleWatched}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isWatched ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isWatched ? "Mark as unwatched" : "Mark as watched"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
 
           {/* Video Info */}

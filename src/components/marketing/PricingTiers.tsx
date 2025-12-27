@@ -5,68 +5,50 @@ import Link from "next/link";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Crown, Infinity as InfinityIcon, ArrowRight } from "lucide-react";
+import { Check, Sparkles, Crown, Infinity as InfinityIcon, ArrowRight, LucideIcon } from "lucide-react";
 import { fadeUp, staggerContainer } from "./motion";
+import { TIERS, TierID } from "@/lib/billing";
 
-// These match the real tiers from settings
-const tiers = [
+// Component-specific tier display config (icons, colors, CTAs)
+// Pricing data comes from the shared TIERS config
+interface MarketingTier {
+  id: TierID;
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  channels: number;
+  icon: LucideIcon;
+  features: string[];
+  cta: string;
+  popular: boolean;
+  accentColor: string;
+}
+
+const tiers: MarketingTier[] = [
   {
-    id: "free",
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for getting started",
-    channels: 5,
+    ...TIERS.free,
     icon: Sparkles,
-    features: [
-      "Up to 5 channels",
-      "Basic chronological feed",
-      "Watch history (7 days)",
-      "Watch time tracking",
-    ],
     cta: "Get Started",
     popular: false,
     accentColor: "#71717a",
+    price: TIERS.free.priceAmount,
   },
   {
-    id: "pro",
-    name: "Pro",
-    price: "$9",
-    period: "/month",
-    description: "Most popular for focused viewers",
-    channels: 25,
+    ...TIERS.pro,
     icon: Crown,
-    features: [
-      "Up to 25 channels",
-      "Custom categories",
-      "Watch history (30 days)",
-      "Resume playback",
-      "Video search",
-      "Daily watch limits",
-    ],
     cta: "Start Pro Trial",
     popular: true,
     accentColor: "#dc2626",
+    price: TIERS.pro.priceAmount,
   },
   {
-    id: "unlimited",
-    name: "Unlimited",
-    price: "$19",
-    period: "/month",
-    description: "No limits, ever",
-    channels: Number.POSITIVE_INFINITY,
+    ...TIERS.unlimited,
     icon: InfinityIcon,
-    features: [
-      "Unlimited channels",
-      "Everything in Pro",
-      "Forever watch history",
-      "Export channel list",
-      "Priority support",
-      "Early access to features",
-    ],
     cta: "Go Unlimited",
     popular: false,
     accentColor: "#0d9488",
+    price: TIERS.unlimited.priceAmount,
   },
 ];
 

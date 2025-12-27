@@ -38,12 +38,21 @@ Create a `.env.local` file:
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # YouTube API (server-side only)
 YOUTUBE_API_KEY=your_youtube_api_key
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Dodo Payments (for subscriptions)
+DODO_PAYMENTS_API_KEY=your_dodo_api_key
+DODO_PAYMENTS_WEBHOOK_KEY=your_webhook_secret
+DODO_PAYMENTS_ENVIRONMENT=test_mode
+DODO_PAYMENTS_RETURN_URL=http://localhost:3000
+DODO_PRODUCT_PRO=pdt_your_pro_product_id
+DODO_PRODUCT_UNLIMITED=pdt_your_unlimited_product_id
 ```
 
 ### Installation
@@ -81,13 +90,13 @@ All tables have Row Level Security (RLS) enabled.
 4. Click on a video to watch in a distraction-free player
 5. Mark videos as watched to track your viewing
 
-## Subscription Tiers (Coming Soon)
+## Subscription Tiers
 
 - **Free**: Up to 5 channels
 - **Pro** ($9/mo): Up to 25 channels, categories, extended history
-- **Unlimited** ($19/mo): Unlimited channels, all features
+- **Unlimited** ($12/mo): Unlimited channels, all features
 
-*Stripe integration pending.*
+Payments are processed via [Dodo Payments](https://dodopayments.com/).
 
 ## Development
 

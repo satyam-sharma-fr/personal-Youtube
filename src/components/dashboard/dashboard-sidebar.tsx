@@ -18,6 +18,8 @@ import {
   Sparkles,
   ChevronRight,
   FolderOpen,
+  Plus,
+  LayoutGrid,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -33,16 +35,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "./dashboard-shell";
 import type { SubscribedChannel, SidebarCategory } from "./dashboard-shell";
+import { AddChannelDialog } from "@/components/channels/add-channel-dialog";
 
 const navigation = [
-  { name: "Feed", href: "/dashboard", icon: Home },
-  { name: "Channels", href: "/dashboard/channels", icon: Tv },
-  { name: "Watch Later", href: "/dashboard/watch-later", icon: Clock },
-  { name: "History", href: "/dashboard/history", icon: History },
+  { name: "Home", href: "/home", icon: Home },
+  { name: "Feed", href: "/dashboard", icon: LayoutGrid },
+  { name: "Channels", href: "/channels", icon: Tv },
+  { name: "Watch Later", href: "/watch-later", icon: Clock },
+  { name: "History", href: "/history", icon: History },
 ];
 
 const bottomNav = [
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 const tierInfo: Record<Tier, { label: string; color: string; bg: string }> = {
@@ -121,6 +125,16 @@ export function DashboardSidebarContent({ channels = [], categories = [] }: Dash
               </Link>
             );
           })}
+
+          {/* Add Channel Button */}
+          <AddChannelDialog>
+            <button
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 mt-2 border border-dashed border-zinc-300 hover:border-zinc-400"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add Channel</span>
+            </button>
+          </AddChannelDialog>
         </nav>
 
         {/* Categories */}
@@ -162,7 +176,7 @@ export function DashboardSidebarContent({ channels = [], categories = [] }: Dash
             <p className="text-xs text-zinc-600 mb-3">
               Unlock unlimited channels, watch limits & more.
             </p>
-            <Link href="/dashboard/settings">
+            <Link href="/settings#billing">
               <Button
                 size="sm"
                 className="w-full bg-red-600 hover:bg-red-700 text-white text-xs h-8 shadow-lg shadow-red-500/20"
@@ -227,13 +241,13 @@ export function DashboardSidebarContent({ channels = [], categories = [] }: Dash
             className="w-56 bg-white border-zinc-200"
           >
             <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50">
-              <Link href="/dashboard/settings">
+              <Link href="/settings">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="text-zinc-700 hover:bg-zinc-50 focus:bg-zinc-50">
-              <Link href="/dashboard/settings">
+              <Link href="/settings#billing">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Billing
               </Link>
@@ -307,6 +321,16 @@ function CollapsedSidebar() {
             </Link>
           );
         })}
+
+        {/* Add Channel Button */}
+        <AddChannelDialog>
+          <button
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 border border-dashed border-zinc-300 hover:border-zinc-400"
+            title="Add Channel"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </AddChannelDialog>
 
         <div className="w-6 h-px bg-zinc-200 my-2" />
 
